@@ -649,9 +649,9 @@ function updateTime(){
 function autoTheme(){
   let t;
   try{t=localStorage.getItem('franos-theme');}catch{}
-  if(!t){const h=nowAR().getHours();t=(h>=7&&h<20)?'light':'dark';}
+  if(!t) t='dark'; // default always dark
   document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-btn').textContent=t==='light'?'🌙':'☀';
+  document.getElementById('theme-btn').textContent=t==='light'?'🌙':'☀️';
 }
 function toggleTheme(){
   const c=document.documentElement.getAttribute('data-theme');
@@ -2601,9 +2601,9 @@ function updateTime(){
 function autoTheme(){
   let t;
   try{t=localStorage.getItem('franos-theme');}catch{}
-  if(!t){const h=nowAR().getHours();t=(h>=7&&h<20)?'light':'dark';}
+  if(!t) t='dark'; // default always dark
   document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-btn').textContent=t==='light'?'🌙':'☀';
+  document.getElementById('theme-btn').textContent=t==='light'?'🌙':'☀️';
 }
 function toggleTheme(){
   const c=document.documentElement.getAttribute('data-theme');

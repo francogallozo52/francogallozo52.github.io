@@ -334,7 +334,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
       </div>
 
       <!-- TAB: ENTRENO -->
-      <div id="yo-tab-entreno" style="display:none">
+      <div id="yo-tab-entreno" style="display:none;overflow-y:auto">
         <div id="perfil-entreno-card" class="card fu fu1" style="margin-bottom:14px"></div>
         <div class="row-between" style="margin-bottom:12px">
           <div class="section-title" style="font-size:20px;margin:0">Sesiones recientes</div>
@@ -412,33 +412,37 @@ select.modal-input{appearance:none;-webkit-appearance:none}
         </div>
       </div>
     </div>
-<div class="screen" id="screen-notas">    
+<div class="screen" id="screen-notas">
+      <div class="section-title fu fu1">Notas</div>
+      <div class="section-sub fu fu1">Tu segunda memoria.</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" class="fu fu2">
+        <span class="nota-tag active" onclick="filterNotas('all',this)">Todas</span>
+        <span class="nota-tag" onclick="filterNotas('idea',this)">💡 Ideas</span>
+        <span class="nota-tag" onclick="filterNotas('investigar',this)">🔍 Investigar</span>
+        <span class="nota-tag" onclick="filterNotas('aprender',this)">📚 Aprender</span>
+        <span class="nota-tag" onclick="filterNotas('tarea',this)">✅ Tarea</span>
+        <span class="nota-tag" onclick="filterNotas('nota',this)">📝 Nota</span>
+      </div>
+      <div id="notas-list"></div>
+    </div>
 
     <div class="screen" id="screen-agenda">
-      <div class="section-title fu fu1" id="agenda-title">Agenda</div>
+      <div class="section-title fu fu1">Agenda</div>
       <div class="tabs fu fu1">
         <div class="tab active" onclick="switchTab('agenda','cal')">📅 Calendario</div>
         <div class="tab" onclick="switchTab('agenda','fin')">💰 Finanzas</div>
       </div>
-
-      <!-- TAB: CALENDARIO -->
       <div id="agenda-tab-cal">
         <div class="card fu fu2">
-          <div class="cal-header">
-            <div class="cal-month" id="cal-label"></div>
-            <div class="cal-nav">
-              <div class="cal-btn" onclick="changeMonth(-1)">←</div>
-              <div class="cal-btn" onclick="changeMonth(1)">→</div>
-            </div>
-          </div>
+          <div class="cal-header"><div class="cal-month" id="cal-label"></div><div class="cal-nav"><div class="cal-btn" onclick="changeMonth(-1)">←</div><div class="cal-btn" onclick="changeMonth(1)">→</div></div></div>
           <div class="cal-grid" id="cal-grid"></div>
         </div>
         <div class="card fu fu2" id="dato-dia-card" style="cursor:pointer" onclick="toggleDatoDia()">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div class="card-label" style="margin:0">📖 Hoy en la historia</div>
-            <div id="dato-dia-arrow" style="font-size:12px;color:var(--text3);transition:transform .2s">▼</div>
+            <div id="dato-dia-arrow" style="font-size:12px;color:var(--text3)">▼</div>
           </div>
-          <div id="dato-dia-titulo" style="font-size:14px;font-weight:500;color:var(--text);line-height:1.5">—</div>
+          <div id="dato-dia-titulo" style="font-size:14px;font-weight:500;color:var(--text)">—</div>
           <div id="dato-dia-detalle" style="display:none;font-size:13px;color:var(--text2);line-height:1.6;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">—</div>
         </div>
         <div class="card fu fu3">
@@ -449,8 +453,6 @@ select.modal-input{appearance:none;-webkit-appearance:none}
           <div id="eventos-list"></div>
         </div>
       </div>
-
-      <!-- TAB: FINANZAS -->
       <div id="agenda-tab-fin" style="display:none">
         <div class="balance-card fu fu2">
           <div class="balance-label">BALANCE DEL MES</div>
@@ -485,8 +487,6 @@ select.modal-input{appearance:none;-webkit-appearance:none}
         <div class="tab active" onclick="switchTab('play','libros')">📚 Libros</div>
         <div class="tab" onclick="switchTab('play','series')">🎬 Series</div>
       </div>
-
-      <!-- TAB: LIBROS -->
       <div id="play-tab-libros">
         <div style="margin-bottom:16px" class="fu fu2">
           <span class="nota-tag active" onclick="filterLibros('all',this)">Todos</span>
@@ -500,8 +500,6 @@ select.modal-input{appearance:none;-webkit-appearance:none}
           <div style="font-size:14px;color:var(--text2)">Agregar libro</div>
         </div>
       </div>
-
-      <!-- TAB: SERIES -->
       <div id="play-tab-series" style="display:none">
         <div style="margin-bottom:16px" class="fu fu2">
           <span class="nota-tag active" onclick="filterSeries('all',this)">Todas</span>
@@ -533,13 +531,9 @@ select.modal-input{appearance:none;-webkit-appearance:none}
         <div class="tab active" onclick="switchTab('diario','entrada')">📓 Hoy</div>
         <div class="tab" onclick="switchTab('diario','semana')">🔄 Semana</div>
       </div>
-
-      <!-- TAB: DIARIO -->
       <div id="diario-tab-entrada">
         <div id="diario-content"></div>
       </div>
-
-      <!-- TAB: REVISION SEMANAL -->
       <div id="diario-tab-semana" style="display:none">
         <div class="quick-stats fu fu2" style="margin-bottom:16px">
           <div class="semana-stat"><div class="semana-num" id="rev-habitos">—</div><div class="semana-label">Hábitos</div></div>
@@ -549,149 +543,14 @@ select.modal-input{appearance:none;-webkit-appearance:none}
         <div class="revision-section fu fu3"><div class="revision-q">🏆 ¿Qué fue lo mejor de esta semana?</div><textarea class="revision-textarea" id="rev-q1" placeholder="El logro más importante..." onblur="saveRevision()"></textarea></div>
         <div class="revision-section fu fu3"><div class="revision-q">😓 ¿Qué no salió como querías?</div><textarea class="revision-textarea" id="rev-q2" placeholder="Sin juzgarte..." onblur="saveRevision()"></textarea></div>
         <div class="revision-section fu fu4"><div class="revision-q">🎯 ¿Qué mejorás la semana que viene?</div><textarea class="revision-textarea" id="rev-q3" placeholder="Una cosa concreta..." onblur="saveRevision()"></textarea></div>
-        <div class="revision-section fu fu5"><div class="revision-q">⚡ Tus 3 prioridades de la semana</div><textarea class="revision-textarea" id="rev-q4" placeholder="1. &#10;2. &#10;3." onblur="saveRevision()"></textarea></div>
-        <button class="btn-primary fu" style="margin-top:8px" onclick="saveRevision();showToast('Revisión guardada ✓')">Guardar ✓</button>
-      </div>
-  </div><!-- /screens -->
-
-
-  </div>
-<div class="screen" id="screen-agenda">
-      <div class="section-title fu fu1" id="agenda-title">Agenda</div>
-      <div class="tabs fu fu1">
-        <div class="tab active" onclick="switchTab('agenda','cal')">📅 Calendario</div>
-        <div class="tab" onclick="switchTab('agenda','fin')">💰 Finanzas</div>
-      </div>
-
-      <!-- TAB: CALENDARIO -->
-      <div id="agenda-tab-cal">
-        <div class="card fu fu2">
-          <div class="cal-header">
-            <div class="cal-month" id="cal-label"></div>
-            <div class="cal-nav">
-              <div class="cal-btn" onclick="changeMonth(-1)">←</div>
-              <div class="cal-btn" onclick="changeMonth(1)">→</div>
-            </div>
-          </div>
-          <div class="cal-grid" id="cal-grid"></div>
-        </div>
-        <div class="card fu fu2" id="dato-dia-card" style="cursor:pointer" onclick="toggleDatoDia()">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <div class="card-label" style="margin:0">📖 Hoy en la historia</div>
-            <div id="dato-dia-arrow" style="font-size:12px;color:var(--text3);transition:transform .2s">▼</div>
-          </div>
-          <div id="dato-dia-titulo" style="font-size:14px;font-weight:500;color:var(--text);line-height:1.5">—</div>
-          <div id="dato-dia-detalle" style="display:none;font-size:13px;color:var(--text2);line-height:1.6;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">—</div>
-        </div>
-        <div class="card fu fu3">
-          <div class="row-between" style="margin-bottom:14px">
-            <div class="card-label" style="margin:0">📌 Eventos</div>
-            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('evento')">+ Agregar</div>
-          </div>
-          <div id="eventos-list"></div>
-        </div>
-      </div>
-
-      <!-- TAB: FINANZAS -->
-      <div id="agenda-tab-fin" style="display:none">
-        <div class="balance-card fu fu2">
-          <div class="balance-label">BALANCE DEL MES</div>
-          <div class="balance-amount" id="fin-balance">$0</div>
-          <div class="balance-sub" id="fin-balance-sub">Sin movimientos este mes</div>
-        </div>
-        <div class="quick-stats fu fu3" style="margin-bottom:12px">
-          <div class="stat-card"><div class="stat-num" style="color:var(--accent3);font-size:18px" id="fin-ingresos">$0</div><div class="stat-label">Ingresos</div></div>
-          <div class="stat-card"><div class="stat-num" style="color:var(--red);font-size:18px" id="fin-gastos">$0</div><div class="stat-label">Gastos</div></div>
-          <div class="stat-card"><div class="stat-num" style="color:var(--accent4);font-size:18px" id="fin-porc">0%</div><div class="stat-label">Ahorro</div></div>
-        </div>
-        <div class="card fu fu4">
-          <div class="row-between" style="margin-bottom:14px">
-            <div class="card-label" style="margin:0">Últimos movimientos</div>
-            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('finanza')">+ Agregar</div>
-          </div>
-          <div id="fin-list"></div>
-        </div>
-        <div class="card fu fu5">
-          <div class="row-between" style="margin-bottom:14px">
-            <div class="card-label" style="margin:0">🎯 Metas de ahorro</div>
-            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('meta')">+ Agregar</div>
-          </div>
-          <div id="metas-list"></div>
-        </div>
+        <div class="revision-section fu fu5"><div class="revision-q">⚡ Tus 3 prioridades</div><textarea class="revision-textarea" id="rev-q4" placeholder="1. &#10;2. &#10;3." onblur="saveRevision()"></textarea></div>
+        <button class="btn-primary fu" onclick="saveRevision();showToast('Revisión guardada ✓')">Guardar ✓</button>
       </div>
     </div>
-<div class="screen" id="screen-play">
-      <div class="section-title fu fu1">Play</div>
-      <div class="tabs fu fu1">
-        <div class="tab active" onclick="switchTab('play','libros')">📚 Libros</div>
-        <div class="tab" onclick="switchTab('play','series')">🎬 Series</div>
-      </div>
 
-      <!-- TAB: LIBROS -->
-      <div id="play-tab-libros">
-        <div style="margin-bottom:16px" class="fu fu2">
-          <span class="nota-tag active" onclick="filterLibros('all',this)">Todos</span>
-          <span class="nota-tag" onclick="filterLibros('leyendo',this)">📖 Leyendo</span>
-          <span class="nota-tag" onclick="filterLibros('pendiente',this)">📚 Pendientes</span>
-          <span class="nota-tag" onclick="filterLibros('leido',this)">✅ Leídos</span>
-        </div>
-        <div id="libros-grid" class="books-grid"></div>
-        <div class="card fu" style="text-align:center;border-style:dashed;cursor:pointer;opacity:.7" onclick="openModal('libro')">
-          <div style="font-size:22px;margin-bottom:6px">📚</div>
-          <div style="font-size:14px;color:var(--text2)">Agregar libro</div>
-        </div>
-      </div>
 
-      <!-- TAB: SERIES -->
-      <div id="play-tab-series" style="display:none">
-        <div style="margin-bottom:16px" class="fu fu2">
-          <span class="nota-tag active" onclick="filterSeries('all',this)">Todas</span>
-          <span class="nota-tag" onclick="filterSeries('viendo',this)">▶ Viendo</span>
-          <span class="nota-tag" onclick="filterSeries('pendiente',this)">🕐 Pendiente</span>
-          <span class="nota-tag" onclick="filterSeries('visto',this)">✅ Visto</span>
-        </div>
-        <div id="series-grid" class="series-grid"></div>
-        <div class="card fu" style="text-align:center;border-style:dashed;cursor:pointer;opacity:.7" onclick="openModal('serie')">
-          <div style="font-size:22px;margin-bottom:6px">🎬</div>
-          <div style="font-size:14px;color:var(--text2)">Agregar serie o peli</div>
-        </div>
-      </div>
-    </div>
-<div class="screen" id="screen-proyectos">
-      <div class="section-title fu fu1">Proyectos</div>
-      <div class="section-sub fu fu1">Lo que estás construyendo.</div>
-      <div id="proyectos-list"></div>
-      <div class="card fu" style="text-align:center;border-style:dashed;cursor:pointer;opacity:.7;margin-top:4px" onclick="openModal('proyecto')">
-        <div style="font-size:22px;margin-bottom:6px">🚀</div>
-        <div style="font-size:14px;color:var(--text2)">Nuevo proyecto</div>
-      </div>
-    </div>
-<div class="screen" id="screen-diario">
-      <div class="section-title fu fu1">Diario</div>
-      <div class="tabs fu fu1">
-        <div class="tab active" onclick="switchTab('diario','entrada')">📓 Hoy</div>
-        <div class="tab" onclick="switchTab('diario','semana')">🔄 Semana</div>
-      </div>
 
-      <!-- TAB: DIARIO -->
-      <div id="diario-tab-entrada">
-        <div id="diario-content"></div>
-      </div>
 
-      <!-- TAB: REVISION SEMANAL -->
-      <div id="diario-tab-semana" style="display:none">
-        <div class="quick-stats fu fu2" style="margin-bottom:16px">
-          <div class="semana-stat"><div class="semana-num" id="rev-habitos">—</div><div class="semana-label">Hábitos</div></div>
-          <div class="semana-stat"><div class="semana-num" id="rev-notas">—</div><div class="semana-label">Ideas</div></div>
-          <div class="semana-stat"><div class="semana-num" id="rev-racha">—</div><div class="semana-label">Racha</div></div>
-        </div>
-        <div class="revision-section fu fu3"><div class="revision-q">🏆 ¿Qué fue lo mejor de esta semana?</div><textarea class="revision-textarea" id="rev-q1" placeholder="El logro más importante..." onblur="saveRevision()"></textarea></div>
-        <div class="revision-section fu fu3"><div class="revision-q">😓 ¿Qué no salió como querías?</div><textarea class="revision-textarea" id="rev-q2" placeholder="Sin juzgarte..." onblur="saveRevision()"></textarea></div>
-        <div class="revision-section fu fu4"><div class="revision-q">🎯 ¿Qué mejorás la semana que viene?</div><textarea class="revision-textarea" id="rev-q3" placeholder="Una cosa concreta..." onblur="saveRevision()"></textarea></div>
-        <div class="revision-section fu fu5"><div class="revision-q">⚡ Tus 3 prioridades de la semana</div><textarea class="revision-textarea" id="rev-q4" placeholder="1. &#10;2. &#10;3." onblur="saveRevision()"></textarea></div>
-        <button class="btn-primary fu" style="margin-top:8px" onclick="saveRevision();showToast('Revisión guardada ✓')">Guardar ✓</button>
-      </div>
-  </div>
     <button class="fab" id="fab-btn" onclick="openModal('captura')">＋</button>
     <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
       <div class="modal" id="modal-content"></div>
@@ -805,19 +664,18 @@ function toggleTheme(){
 function goTo(screen, navItem){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const screenId = screen;
-  const el = document.getElementById('screen-'+screenId);
-  if(el){ el.classList.add('active'); }
-  else { console.warn('Screen not found: screen-'+screenId); }
+  const el = document.getElementById('screen-'+screen);
+  if(el) el.classList.add('active');
   if(navItem) navItem.classList.add('active');
-  document.getElementById('fab-btn').style.display = screenId==='diario'?'none':'flex';
-  if(screenId==='agenda'){loadAgenda();loadFinanzas();}
-  if(screenId==='yo'){loadHabitos();}
-  if(screenId==='play'){loadLibros(lFilter);loadSeries(sFilter);}
-  if(screenId==='diario'){loadDiario();loadRevision();}
-  if(screenId==='proyectos') loadProyectos();
-  if(screenId==='habitos') loadHabitos();
-  if(screenId==='notas') loadNotas(cFilter);
+  const fab = document.getElementById('fab-btn');
+  if(fab) fab.style.display = screen==='diario'?'none':'flex';
+  if(screen==='home') loadHome();
+  if(screen==='yo') loadHabitos();
+  if(screen==='notas') loadNotas(cFilter);
+  if(screen==='agenda'){loadAgenda();loadFinanzas();}
+  if(screen==='play'){loadLibros(lFilter);loadSeries(sFilter);}
+  if(screen==='proyectos') loadProyectos();
+  if(screen==='diario'){loadDiario();loadRevision();}
 }
 function refreshFrase(){
   fi=(fi+1)%FRASES.length;
@@ -2757,19 +2615,18 @@ function toggleTheme(){
 function goTo(screen, navItem){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const screenId = screen;
-  const el = document.getElementById('screen-'+screenId);
-  if(el){ el.classList.add('active'); }
-  else { console.warn('Screen not found: screen-'+screenId); }
+  const el = document.getElementById('screen-'+screen);
+  if(el) el.classList.add('active');
   if(navItem) navItem.classList.add('active');
-  document.getElementById('fab-btn').style.display = screenId==='diario'?'none':'flex';
-  if(screenId==='agenda'){loadAgenda();loadFinanzas();}
-  if(screenId==='yo'){loadHabitos();}
-  if(screenId==='play'){loadLibros(lFilter);loadSeries(sFilter);}
-  if(screenId==='diario'){loadDiario();loadRevision();}
-  if(screenId==='proyectos') loadProyectos();
-  if(screenId==='habitos') loadHabitos();
-  if(screenId==='notas') loadNotas(cFilter);
+  const fab = document.getElementById('fab-btn');
+  if(fab) fab.style.display = screen==='diario'?'none':'flex';
+  if(screen==='home') loadHome();
+  if(screen==='yo') loadHabitos();
+  if(screen==='notas') loadNotas(cFilter);
+  if(screen==='agenda'){loadAgenda();loadFinanzas();}
+  if(screen==='play'){loadLibros(lFilter);loadSeries(sFilter);}
+  if(screen==='proyectos') loadProyectos();
+  if(screen==='diario'){loadDiario();loadRevision();}
 }
 function refreshFrase(){
   fi=(fi+1)%FRASES.length;

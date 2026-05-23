@@ -535,7 +535,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
         <div class="revision-section fu fu3"><div class="revision-q">😓 ¿Qué no salió como querías?</div><textarea class="revision-textarea" id="rev-q2" placeholder="Sin juzgarte..." onblur="saveRevision()"></textarea></div>
         <div class="revision-section fu fu4"><div class="revision-q">🎯 ¿Qué mejorás la semana que viene?</div><textarea class="revision-textarea" id="rev-q3" placeholder="Una cosa concreta..." onblur="saveRevision()"></textarea></div>
         <div class="revision-section fu fu5"><div class="revision-q">⚡ Tus 3 prioridades</div><textarea class="revision-textarea" id="rev-q4" placeholder="1. &#10;2. &#10;3." onblur="saveRevision()"></textarea></div>
-        <button class="btn-primary fu" onclick="saveRevision();showToast('Revisión guardada ✓')">Guardar ✓</button>
+        <button class="btn-primary fu" onclick="saveRevision();showToast('Revisión guardada ✓');earnXP('diario-uso',1,1);if(nowAR().getDay()===0){earnXP('diario-semana-1',1,1);earnXP('diario-semana-2',1,1);earnXP('diario-semana-3',1,1);}">Guardar ✓</button>
       </div>
     </div>
 
@@ -609,11 +609,135 @@ function monthStart(){return new Date().toLocaleDateString('en-CA',{timeZone:'Am
 function weekStart(){const dow=nowAR().getDay();const offset=(dow+6)%7;return daysAgo(offset);}
 
 // ── INIT — cada sección independiente, ninguna bloquea a la otra ──
+// ── SISTEMA DE XP Y PUNTOS ──
+const XP_KEY = 'franos-xp';
+const XP_LOG_KEY = 'franos-xp-log'; // tracks what was earned today
+const SESION_START_KEY = 'franos-sesion-start';
+
+function getXP(){ try{ return parseInt(localStorage.getItem(XP_KEY)||'0'); }catch{ return 0; } }
+function setXP(v){ try{ localStorage.setItem(XP_KEY, Math.max(0,v)); }catch{} }
+
+function getTodayLog(){
+  try{
+    const raw = localStorage.getItem(XP_LOG_KEY);
+    const log = raw ? JSON.parse(raw) : {};
+    if(log.fecha !== today()) return {}; // reset daily
+    return log;
+  }catch{ return {}; }
+}
+function saveTodayLog(log){
+  try{ localStorage.setItem(XP_LOG_KEY, JSON.stringify({...log, fecha:today()})); }catch{}
+}
+
+function earnXP(motivo, puntos, maxPorDia=1){
+  const log = getTodayLog();
+  const count = log[motivo] || 0;
+  if(count >= maxPorDia) return 0; // already earned today
+  log[motivo] = count + 1;
+  saveTodayLog(log);
+  const current = getXP();
+  setXP(current + puntos);
+  updateXPDisplay();
+  return puntos;
+}
+
+function updateXPDisplay(){
+  const xp = getXP();
+  const nivel = getNivel(xp);
+  const siguienteXP = getXPParaSiguiente(xp);
+  const xpEnNivel = xp - NIVEL_XP[nivel];
+  const xpParaSiguiente = siguienteXP ? (siguienteXP - NIVEL_XP[nivel]) : null;
+  const pct = xpParaSiguiente ? Math.round((xpEnNivel/xpParaSiguiente)*100) : 100;
+
+  const nivEl = document.getElementById('stats-nivel');
+  const xpEl = document.getElementById('stats-xp');
+  const barEl = document.getElementById('stats-xp-bar');
+  const descEl = document.getElementById('stats-nivel-desc');
+
+  if(nivEl) nivEl.textContent = `⚡ Nivel ${nivel} — ${NIVEL_NOMBRES[nivel]}`;
+  if(xpEl) xpEl.textContent = xpParaSiguiente ? `${xpEnNivel} / ${xpParaSiguiente} XP` : `${xp} XP — Nivel máximo`;
+  if(barEl) barEl.style.width = pct+'%';
+  if(descEl){
+    descEl.style.display = 'block';
+    descEl.innerHTML = `<span style="color:var(--text2)">${NIVEL_DESCS[nivel]}</span><br><br><span style="color:var(--text3);font-size:12px">💡 Llevás <strong style="color:var(--accent3)">${xp} XP</strong> en total. Seguís sumando.</span>`;
+  }
+}
+
+// ── PENALIZACIÓN POR INACTIVIDAD ──
+function checkPenalizacion(){
+  try{
+    const sesiones = JSON.parse(localStorage.getItem('franos-sesiones-dias')||'[]');
+    if(sesiones.length === 0) return;
+    const ultimaDia = sesiones[sesiones.length-1];
+    const hoy = today();
+    // calculate days since last session
+    const diff = Math.floor((new Date(hoy) - new Date(ultimaDia)) / (1000*60*60*24));
+    if(diff >= 7){
+      const current = getXP();
+      setXP(Math.max(0, current - 50));
+      showToast('−50 XP por inactividad de 7 días');
+      // reset so it only fires once per 7-day period
+      const newSesiones = sesiones.filter(d => {
+        const daysDiff = Math.floor((new Date(hoy) - new Date(d)) / (1000*60*60*24));
+        return daysDiff < 7;
+      });
+      newSesiones.push(hoy);
+      localStorage.setItem('franos-sesiones-dias', JSON.stringify(newSesiones));
+    }
+    // Check racha warning - 2nd day without use
+    if(diff === 1){
+      // check if notification permission
+      if(Notification?.permission === 'granted'){
+        const now = nowAR();
+        const msToMidnight = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1) - now;
+        const hoursLeft = Math.floor(msToMidnight/3600000);
+        setTimeout(()=>{
+          new Notification('FranOS — No pierdas la racha 🔥', {
+            body: `Está bien descansar un día, pero no pierdas la racha. Te quedan ${hoursLeft} horas.`,
+            icon: './icon-192.png',
+            tag: 'franos-racha-warning'
+          });
+        }, 5000);
+      }
+    }
+  }catch(e){ console.warn('penalizacion:', e); }
+}
+
+function registrarDiaSesion(){
+  try{
+    const sesiones = JSON.parse(localStorage.getItem('franos-sesiones-dias')||'[]');
+    const hoy = today();
+    if(!sesiones.includes(hoy)){
+      sesiones.push(hoy);
+      // keep last 30 days only
+      const recientes = sesiones.slice(-30);
+      localStorage.setItem('franos-sesiones-dias', JSON.stringify(recientes));
+    }
+  }catch{}
+}
+
+// Track session time for 1-minute requirement
+let sesionTimer = null;
+let sesionContada = false;
+function iniciarTimerSesion(){
+  if(sesionContada) return;
+  sesionTimer = setTimeout(()=>{
+    sesionContada = true;
+    registrarDiaSesion();
+    // also earn "uso de la app hoy" for racha
+    earnXP('uso-app', 0, 1); // 0 XP but marks the day
+    checkPenalizacion();
+  }, 60000); // 1 minute
+}
+
+
 function init(){
   updateTime();setInterval(updateTime,30000);
   autoTheme();
   document.getElementById('frase-text').textContent=FRASES[fi];
   registrarSesion();
+  iniciarTimerSesion();
+  updateXPDisplay();
   initNotifications();
   // cada sección carga independientemente
   loadHome();
@@ -1006,7 +1130,8 @@ async function loadProyectos(){
     }).join('');
   }catch(e){document.getElementById('proyectos-list').innerHTML=`<div class="empty"><div class="et">Sin proyectos aún</div></div>`;console.warn('proyectos:',e.message);}
 }
-async function toggleSub(id,done){try{await sb('subtareas','PATCH',{completada:!done},`?id=eq.${id}`);loadProyectos();}catch{}}
+async function toggleSub(id,done){try{await sb('subtareas','PATCH',{completada:!done},`?id=eq.${id}`);
+    if(!done){ earnXP('proyectos-uso',1,1); earnXP('proyectos-subtarea',1,999); }loadProyectos();}catch{}}
 async function delSub(id){try{await sb('subtareas','DELETE',null,`?id=eq.${id}`);loadProyectos();}catch{}}
 async function delProyecto(id){if(!confirm('¿Eliminar?'))return;try{await sb('proyectos','DELETE',null,`?id=eq.${id}`);loadProyectos();}catch{}}
 
@@ -1059,53 +1184,27 @@ async function saveRevision(){
 }
 
 // ── STATS ──
-const NIVEL_DESCS=['','Estás poniendo los primeros cimientos. Cada hábito que completás es una piedra que ponés. La racha empieza acá.','La estructura toma forma. No es suerte, es constancia. Estás construyendo algo real.','Ya ves el edificio completo. Nada te detiene. Cuando no tenés ganas, igual aparecés.','Un rascacielos. Tu disciplina ya es parte de quién sos. El 99% no llega acá.','Un monumento a la constancia. Cada día que elegís avanzar es un día que define tu vida.'];
-const NIVEL_NOMBRES=['','Cimientos','Estructura','Edificio','Rascacielos','Monumento'];
+const NIVEL_DESCS=['','Estás poniendo los cimientos. Cada acción suma aunque no lo parezca. El primer paso siempre es el más importante.','Ya hay forma. La constancia empieza a tomar cuerpo. Se nota que esto no fue casualidad.','Se nota el trabajo. Estás construyendo algo real y duradero. La disciplina ya es un hábito en sí mismo.','Pocos llegan acá. Tu disciplina ya es parte de quién sos. Cada día que aparecés es una declaración.','Llegaste. Y seguís. Eso es exactamente lo que te diferencia del resto.'];
+const NIVEL_NOMBRES=['','Base','Estructura','Torre','Rascacielos','Monumento'];
+const NIVEL_XP=[0,0,500,1000,1500,2000];
+function getNivel(xp){ let n=1; for(let i=2;i<=5;i++){if(xp>=NIVEL_XP[i])n=i;} return n; }
+function getXPParaSiguiente(xp){ const n=getNivel(xp); if(n>=5)return null; return NIVEL_XP[n+1]; }
 
 async function loadStats(){
   try{
+    const allLogs=await sb('habitos_log','GET',null,'?completado=eq.true&select=fecha,habito_id');
     const DL=['D','L','M','M','J','V','S'];
-
-    // fetch all relevant data for the week
-    const [habLogs, notasAll, diarioAll, sesionesAll, allHabs] = await Promise.all([
-      sb('habitos_log','GET',null,'?completado=eq.true&select=fecha,habito_id'),
-      sb('notas','GET',null,'?select=created_at'),
-      sb('diario','GET',null,'?select=fecha,texto'),
-      sb('sesiones','GET',null,'?select=fecha,visitas'),
-      sb('habitos','GET',null,'?select=id'),
-    ]);
-
-    const totalHabs = allHabs.length || 1;
-
-    // build chart for last 7 days — score per day (0-100)
-    const d7 = [];
+    const d7=[];
     for(let i=6;i>=0;i--){
-      const dateStr = daysAgo(i);
-      const jsDay = new Date(dateStr+'T12:00:00').getDay();
-
-      // habits score (0-40 pts)
-      const uniqueHabsDone = new Set(habLogs.filter(l=>l.fecha===dateStr).map(l=>l.habito_id)).size;
-      const habScore = Math.round((uniqueHabsDone/totalHabs)*40);
-
-      // notes score (0-30 pts) - up to 3 notes = full score
-      const notasCount = notasAll.filter(n=>n.created_at&&n.created_at.startsWith(dateStr)).length;
-      const notaScore = Math.min(30, notasCount * 10);
-
-      // diary score (0-20 pts)
-      const diarioEntry = diarioAll.find(d=>d.fecha===dateStr);
-      const diarioScore = diarioEntry&&diarioEntry.texto&&diarioEntry.texto.length>10 ? 20 : 0;
-
-      // session score (0-10 pts)
-      const sesion = sesionesAll.find(s=>s.fecha===dateStr);
-      const sesionScore = sesion ? Math.min(10, sesion.visitas*5) : 0;
-
-      const total = habScore + notaScore + diarioScore + sesionScore;
-      d7.push({dateStr, total, label:DL[jsDay], isToday:i===0});
+      const dateStr=daysAgo(i);
+      const count=new Set(allLogs.filter(l=>l.fecha===dateStr).map(l=>l.habito_id)).size;
+      const jsDay=new Date(dateStr+'T12:00:00').getDay();
+      d7.push({dateStr,count,label:DL[jsDay],isToday:i===0});
     }
-
-    const maxScore = Math.max(...d7.map(x=>x.total), 1);
-    document.getElementById('stats-chart').innerHTML = d7.map(b=>{
-      const pct = Math.min(b.total, 100);
+    const maxC=Math.max(...d7.map(x=>x.count),1);
+    const chartEl=document.getElementById('stats-chart');
+    if(chartEl) chartEl.innerHTML=d7.map(b=>{
+      const pct=Math.max(Math.round((b.count/maxC)*100),b.count>0?8:4);
       return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
         <div style="flex:1;width:100%;background:var(--bg4);border-radius:6px;position:relative;overflow:hidden;min-height:60px">
           <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:var(--accent3);border-radius:6px;transition:height .6s ease"></div>
@@ -1113,200 +1212,10 @@ async function loadStats(){
         <div style="font-size:10px;color:${b.isToday?'var(--accent3)':'var(--text3)'};font-weight:${b.isToday?600:400}">${b.label}</div>
       </div>`;
     }).join('');
-
-    // XP and level (based on total habit logs)
-    const totalLogs = habLogs.length;
-    const xp = totalLogs*10, nivel=Math.min(Math.floor(xp/500)+1,5), xpN=xp%500;
-    document.getElementById('stats-nivel').textContent=`⚡ Nivel ${nivel} — ${NIVEL_NOMBRES[nivel]}`;
-    document.getElementById('stats-xp').textContent=`${xpN} / 500 XP`;
-    document.getElementById('stats-xp-bar').style.width=`${Math.round((xpN/500)*100)}%`;
-    const desc=document.getElementById('stats-nivel-desc');
-    if(desc)desc.innerHTML=`${NIVEL_DESCS[nivel]||''}<br><br><span style="color:var(--text3);font-size:12px">💡 Ganás <strong style="color:var(--accent3)">10 XP</strong> por cada hábito que tildás. Cada <strong style="color:var(--accent3)">500 XP</strong> subís de nivel. Llevás <strong style="color:var(--accent3)">${totalLogs} hábitos</strong> completados en total.</span>`;
+    updateXPDisplay();
   }catch(e){console.warn('stats:',e.message);}
 }
 
-function toggleStatsHome(){
-  const el=document.getElementById('stats-home-content');
-  const arrow=document.getElementById('stats-home-arrow');
-  if(!el)return;
-  const open=el.style.display==='none';
-  el.style.display=open?'block':'none';
-  if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0)';
-  if(open)loadStats();
-}
-function toggleNivel(){
-  const desc=document.getElementById('stats-nivel-desc');
-  if(!desc)return;
-  desc.style.display=desc.style.display==='none'?'block':'none';
-}
-
-// ── MODAL ──
-function openModal(type,extra=''){
-  const mc=document.getElementById('modal-content');
-  let html='<div class="modal-handle"></div>';
-  if(type==='captura'){html+=`<div class="modal-title">Captura rápida ⚡</div><div class="modal-tags"><button class="modal-tag selected" onclick="selTag(this)">💡 Idea</button><button class="modal-tag" onclick="selTag(this)">🔍 Investigar</button><button class="modal-tag" onclick="selTag(this)">📚 Aprender</button><button class="modal-tag" onclick="selTag(this)">✅ Tarea</button><button class="modal-tag" onclick="selTag(this)">📝 Nota</button></div><textarea class="modal-textarea" id="m-texto" placeholder="¿Qué tenés en la cabeza?"></textarea><button class="btn-primary" onclick="guardarNota()">Guardar ✓</button>`;}
-  else if(type==='habito'){html+=`<div class="modal-title">Nuevo hábito</div><input class="modal-input" id="m-hnom" placeholder="Nombre"><div class="modal-row"><input class="modal-input" id="m-hicon" placeholder="Ícono 🌟" style="margin-bottom:0"><input class="modal-input" id="m-hobj" placeholder="Objetivo" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarHabito()" style="margin-top:10px">Agregar ✓</button>`;}
-  else if(type==='evento'){html+=`<div class="modal-title">Nuevo evento</div><input class="modal-input" id="m-etit" placeholder="Título"><div class="modal-row"><input class="modal-input" id="m-efecha" type="date" value="${extra||today()}" style="margin-bottom:0"><input class="modal-input" id="m-ehora" type="time" style="margin-bottom:0"></div><select class="modal-input" id="m-ecolor"><option value="#7b6fcd">🟣 Violeta</option><option value="#d4845a">🟠 Naranja</option><option value="#5aad8f">🟢 Verde</option><option value="#d4a45a">🟡 Amarillo</option><option value="#c96060">🔴 Rojo</option></select><button class="btn-primary" onclick="guardarEvento()">Agregar ✓</button>`;}
-  else if(type==='finanza'){html+=`<div class="modal-title">Nuevo movimiento</div><div class="modal-row" style="margin-bottom:10px"><button class="modal-tag selected" id="ftipo-gasto" onclick="selFinTipo('gasto')">↓ Gasto</button><button class="modal-tag" id="ftipo-ingreso" onclick="selFinTipo('ingreso')">↑ Ingreso</button></div><input class="modal-input" id="m-fdesc" placeholder="Descripción"><div class="modal-row"><input class="modal-input" id="m-fmonto" type="number" placeholder="Monto $" style="margin-bottom:0"><input class="modal-input" id="m-ficon" placeholder="Ícono 🛒" style="margin-bottom:0"></div><input class="modal-input" id="m-ffecha" type="date" value="${today()}"><button class="btn-primary" onclick="guardarFinanza()">Guardar ✓</button>`;}
-  else if(type==='meta'){html+=`<div class="modal-title">Nueva meta</div><input class="modal-input" id="m-mnom" placeholder="Nombre (ej: Viaje a Bariloche)"><div class="modal-row"><input class="modal-input" id="m-mobj" type="number" placeholder="Objetivo $" style="margin-bottom:0"><input class="modal-input" id="m-micon" placeholder="Ícono 🎯" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarMeta()" style="margin-top:10px">Crear ✓</button>`;}
-  else if(type==='abono'){html+=`<div class="modal-title">Abonar a meta</div><input class="modal-input" id="m-abono" type="number" placeholder="Monto $"><button class="btn-primary" onclick="guardarAbono('${extra}')">Abonar ✓</button>`;}
-  else if(type==='logro'){html+=`<div class="modal-title">Agregar logro</div><input class="modal-input" id="m-logro" placeholder="¿Qué lograste hoy?"><button class="btn-primary" onclick="guardarLogro()">Agregar ✓</button>`;}
-  else if(type==='libro'){html+=`<div class="modal-title">Agregar libro 📚</div><input class="modal-input" id="m-btit" placeholder="Título"><input class="modal-input" id="m-baut" placeholder="Autor"><select class="modal-input" id="m-best"><option value="leyendo">📖 Leyendo</option><option value="pendiente" selected>📚 Pendiente</option><option value="leido">✅ Leído</option></select><div class="modal-row"><input class="modal-input" id="m-bpags" type="number" placeholder="Total de páginas" style="margin-bottom:0"><input class="modal-input" id="m-bpag" type="number" placeholder="Página actual" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarLibro()" style="margin-top:10px">Agregar ✓</button>`;}
-  else if(type==='libro-editar'){
-    // extra = id|titulo|autor|estado|paginas_total|pagina_actual
-    const[id,tit,aut,est,pt,pa]=extra.split('|');
-    html+=`<div class="modal-title">Editar libro 📚</div>
-    <input class="modal-input" id="m-btit" value="${tit||''}" placeholder="Título">
-    <input class="modal-input" id="m-baut" value="${aut||''}" placeholder="Autor">
-    <select class="modal-input" id="m-best">
-      <option value="leyendo" ${est==='leyendo'?'selected':''}>📖 Leyendo</option>
-      <option value="pendiente" ${est==='pendiente'?'selected':''}>📚 Pendiente</option>
-      <option value="leido" ${est==='leido'?'selected':''}>✅ Leído</option>
-    </select>
-    <div class="modal-row">
-      <input class="modal-input" id="m-bpags" type="number" value="${pt||0}" placeholder="Total páginas" style="margin-bottom:0">
-      <input class="modal-input" id="m-bpag" type="number" value="${pa||0}" placeholder="Página actual" style="margin-bottom:0">
-    </div>
-    <button class="btn-primary" onclick="editarLibro('${id}')" style="margin-top:10px">Guardar cambios ✓</button>`;
-  }
-  else if(type==='libro-progreso'){const[id,total]=extra.split('|');html+=`<div class="modal-title">¿Por qué página vas? 📖</div><input class="modal-input" id="m-bprog" type="number" placeholder="Página actual" max="${total}"><div style="font-size:12px;color:var(--text3);margin-bottom:12px">Total: ${total} páginas</div><button class="btn-primary" onclick="guardarProgLibro('${id}','${total}')">Actualizar ✓</button>`;}
-  else if(type==='serie'){html+=`<div class="modal-title">Agregar serie o peli 🎬</div>
-    <input class="modal-input" id="m-stit" placeholder="Título (ej: The Boys)">
-    <select class="modal-input" id="m-sest"><option value="viendo">▶ Viendo</option><option value="pendiente" selected>🕐 Pendiente</option><option value="visto">✅ Visto</option></select>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Progreso (opcional)</div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-stemp" type="number" placeholder="Temporada actual" style="margin-bottom:0">
-      <input class="modal-input" id="m-sep" type="number" placeholder="Episodio actual" style="margin-bottom:0">
-    </div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-stemps" type="number" placeholder="Total temporadas" style="margin-bottom:0">
-      <input class="modal-input" id="m-seps" type="number" placeholder="Total episodios" style="margin-bottom:0">
-    </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Buscamos la portada automáticamente 🎨</div>
-    <button class="btn-primary" onclick="guardarSerie()">Agregar ✓</button>`;}
-  else if(type==='serie-editar'){
-    const[id,tit,est,stemp,sep,stemps,seps]=extra.split('|');
-    html+=`<div class="modal-title">Editar serie 🎬</div>
-    <input class="modal-input" id="m-stit" value="${tit||''}" placeholder="Título">
-    <select class="modal-input" id="m-sest">
-      <option value="viendo" ${est==='viendo'?'selected':''}>▶ Viendo</option>
-      <option value="pendiente" ${est==='pendiente'?'selected':''}>🕐 Pendiente</option>
-      <option value="visto" ${est==='visto'?'selected':''}>✅ Visto</option>
-    </select>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Progreso</div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-stemp" type="number" value="${stemp||0}" placeholder="Temporada actual" style="margin-bottom:0">
-      <input class="modal-input" id="m-sep" type="number" value="${sep||0}" placeholder="Episodio actual" style="margin-bottom:0">
-    </div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-stemps" type="number" value="${stemps||0}" placeholder="Total temporadas" style="margin-bottom:0">
-      <input class="modal-input" id="m-seps" type="number" value="${seps||0}" placeholder="Total episodios" style="margin-bottom:0">
-    </div>
-    <button class="btn-primary" onclick="editarSerie('${id}')" style="margin-top:10px">Guardar cambios ✓</button>`;
-  }
-  else if(type==='serie-progreso'){const[id,total]=extra.split('|');html+=`<div class="modal-title">¿Qué episodio vas? 🎬</div><input class="modal-input" id="m-sprog" type="number" placeholder="Episodio actual" max="${total}"><div style="font-size:12px;color:var(--text3);margin-bottom:12px">Total: ${total} episodios</div><button class="btn-primary" onclick="guardarProgSerie('${id}','${total}')">Actualizar ✓</button>`;}
-  else if(type==='proyecto'){html+=`<div class="modal-title">Nuevo proyecto 🚀</div><input class="modal-input" id="m-pnom" placeholder="Nombre del proyecto"><div class="modal-row"><input class="modal-input" id="m-picon" placeholder="Ícono 🚀" style="margin-bottom:0"><input class="modal-input" id="m-pdesc" placeholder="Descripción" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarProyecto()" style="margin-top:10px">Crear ✓</button>`;}
-  else if(type==='perfil'){
-    html+=`<div class="modal-title">Tu perfil 💎</div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-ppeso" type="number" step="0.1" placeholder="Peso actual (kg)" style="margin-bottom:0">
-      <input class="modal-input" id="m-pmeta" type="number" step="0.1" placeholder="Peso meta (kg)" style="margin-bottom:0">
-    </div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-paltura" type="number" placeholder="Altura (cm)" style="margin-bottom:0">
-      <select class="modal-input" id="m-pnivel" style="margin-bottom:0">
-        <option value="principiante">Principiante</option>
-        <option value="intermedio">Intermedio</option>
-        <option value="avanzado">Avanzado</option>
-      </select>
-    </div>
-    <select class="modal-input" id="m-pobjetivo">
-      <option value="ganar_musculo">Ganar músculo</option>
-      <option value="perder_peso">Perder peso</option>
-      <option value="resistencia">Mejorar resistencia</option>
-      <option value="bienestar">Salud y bienestar general</option>
-    </select>
-    <button class="btn-primary" onclick="guardarPerfil()">Guardar ✓</button>`;
-  }
-  else if(type==='entreno'){
-    html+=`<div class="modal-title">Registrar sesión 💪</div>
-    <select class="modal-input" id="m-etipo">
-      ${['Calistenia','Natación','Bicicleta','Running','Gym','HIIT','Yoga','Fútbol','Básquet','Otro'].map(t=>`<option value="${t}">${t}</option>`).join('')}
-    </select>
-    <div class="modal-row">
-      <input class="modal-input" id="m-edur" type="number" placeholder="Duración (min)" style="margin-bottom:0">
-      <select class="modal-input" id="m-eint" style="margin-bottom:0">
-        <option value="">Intensidad...</option>
-        <option value="Suave">Suave</option>
-        <option value="Moderada">Moderada</option>
-        <option value="Intensa">Intensa</option>
-      </select>
-    </div>
-    <input class="modal-input" id="m-efecha2" type="date" value="${today()}">
-    <textarea class="modal-textarea" id="m-enotas" placeholder="Notas opcionales (ej: hice 3x10 flexiones)"></textarea>
-    <button class="btn-primary" onclick="guardarEntreno()">Guardar ✓</button>`;
-  }
-  else if(type==='comida'){
-    html+=`<div class="modal-title">Agregar comida 🍽️</div>
-    <input class="modal-input" id="m-cnombre" placeholder="Nombre (ej: Milanesa con ensalada)">
-    <div class="modal-row">
-      <input class="modal-input" id="m-ccal" type="number" placeholder="Calorías aprox." style="margin-bottom:0">
-      <input class="modal-input" id="m-cicono" placeholder="Ícono 🍽️" style="margin-bottom:0">
-    </div>
-    <div class="modal-row">
-      <input class="modal-input" id="m-cprot" type="number" placeholder="Proteínas (g)" style="margin-bottom:0">
-      <input class="modal-input" id="m-ccarb" type="number" placeholder="Carbos (g)" style="margin-bottom:0">
-    </div>
-    <button class="btn-primary" onclick="guardarComida()" style="margin-top:4px">Agregar ✓</button>`;
-  }
-  else if(type==='peso'){
-    html+=`<div class="modal-title">Registrar peso ⚖️</div>
-    <input class="modal-input" id="m-wkg" type="number" step="0.1" placeholder="Peso (kg)">
-    <input class="modal-input" id="m-wfecha" type="date" value="${today()}">
-    <input class="modal-input" id="m-wnota" placeholder="Nota opcional">
-    <button class="btn-primary" onclick="guardarPeso()">Guardar ✓</button>`;
-  }
-  else if(type==='sueno'){
-    html+=`<div class="modal-title">Registrar sueño 😴</div>
-    <div class="modal-row">
-      <div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Me dormí</div>
-        <input class="modal-input" id="m-sdormir" type="time" style="margin-bottom:0">
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Me desperté</div>
-        <input class="modal-input" id="m-sdespertar" type="time" style="margin-bottom:0">
-      </div>
-    </div>
-    <div style="margin:10px 0">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Calidad del sueño</div>
-      <div style="display:flex;gap:8px">
-        ${[1,2,3,4,5].map(n=>`<div onclick="selCalidadSueno(${n})" id="cal-sueno-${n}" style="flex:1;text-align:center;padding:8px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;font-size:18px">${n<=2?'😴':n<=3?'😐':n<=4?'🙂':'😊'}</div>`).join('')}
-      </div>
-    </div>
-    <textarea class="modal-textarea" id="m-snota" placeholder="Nota opcional (ej: me desperté varias veces)"></textarea>
-    <button class="btn-primary" onclick="guardarSueno()">Guardar ✓</button>`;
-  }
-  else if(type==='turno'){
-    html+=`<div class="modal-title">Turno médico 🏥</div>
-    <input class="modal-input" id="m-tesp" placeholder="Especialidad" value="${extra||''}">
-    <input class="modal-input" id="m-tmed" placeholder="Médico (opcional)">
-    <div class="modal-row">
-      <input class="modal-input" id="m-tfecha2" type="date" style="margin-bottom:0">
-      <input class="modal-input" id="m-thora" type="time" style="margin-bottom:0">
-    </div>
-    <textarea class="modal-textarea" id="m-tnota" placeholder="Nota (ej: llevar estudios anteriores)"></textarea>
-    <button class="btn-primary" onclick="guardarTurno()">Agendar ✓</button>`;
-  }
-  else if(type==='subtarea'){html+=`<div class="modal-title">Nueva tarea</div><input class="modal-input" id="m-stexto" placeholder="¿Qué hay que hacer?"><button class="btn-primary" onclick="guardarSubtarea('${extra}')">Agregar ✓</button>`;}
-  mc.innerHTML=html;
-  document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(()=>mc.querySelector('input,textarea')?.focus(),350);
-}
-function handleOverlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
-function selTag(el){document.querySelectorAll('.modal-tag').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');}
-function selFinTipo(tipo){finTipo=tipo;['gasto','ingreso'].forEach(t=>{document.getElementById(`ftipo-${t}`)?.classList.toggle('selected',t===tipo);});}
 
 async function guardarNota(){const texto=document.getElementById('m-texto')?.value.trim();if(!texto){showToast('Escribí algo');return;}const catMap={'💡 Idea':'idea','🔍 Investigar':'investigar','📚 Aprender':'aprender','✅ Tarea':'tarea','📝 Nota':'nota'};const tag=document.querySelector('.modal-tag.selected');const categoria=catMap[tag?.textContent.trim()]||'idea';try{await sb('notas','POST',{texto,categoria});closeModal();showToast('💡 Guardado');loadNotas(cFilter);}catch{showToast('Error');}}
 async function guardarHabito(){const nombre=document.getElementById('m-hnom')?.value.trim();if(!nombre){showToast('Poné un nombre');return;}const icono=document.getElementById('m-hicon')?.value.trim()||'⭐';const objetivo=document.getElementById('m-hobj')?.value.trim()||'Diario';try{await sb('habitos','POST',{nombre,icono,objetivo,streak:0});closeModal();showToast('Hábito agregado ✓');loadHabitos();}catch{showToast('Error');}}
@@ -2067,6 +1976,9 @@ async function addAgua(ml){
     }
     loadNutricionTab();
     showToast(`+${ml}ml 💧`);
+    earnXP('yo-uso',1,1);
+    const aguaTotal=(existing.length?(existing[0].agua_ml||0):0)+ml;
+    if(aguaTotal>=2000) earnXP('yo-agua',1,1);
   }catch(e){showToast('Error');}
 }
 
@@ -2237,6 +2149,8 @@ async function guardarEntreno(){
   try{
     await sb('entrenamientos','POST',{tipo,duracion,intensidad,fecha,notas});
     closeModal();showToast('Sesión registrada ✓');loadEntrenoTab();
+    earnXP('yo-uso',1,1);
+    earnXP('yo-entreno',1,1);
   }catch{showToast('Error');}
 }
 
@@ -2257,6 +2171,9 @@ async function guardarComida(){
       await sb('nutricion','POST',{fecha:today(),comidas:[comida],agua_ml:0});
     }
     closeModal();showToast('Comida agregada ✓');loadNutricionTab();
+    earnXP('yo-uso',1,1);
+    const cl=getTodayLog();cl['comidas-count']=(cl['comidas-count']||0)+1;saveTodayLog(cl);
+    if(cl['comidas-count']>=4) earnXP('yo-comidas',1,1);
   }catch{showToast('Error');}
 }
 
@@ -2292,6 +2209,9 @@ async function guardarSueno(){
     if(existing.length) await sb('sueno','PATCH',data,`?fecha=eq.${today()}`);
     else await sb('sueno','POST',{...data,fecha:today()});
     closeModal();showToast('Sueño registrado ✓');loadSaludTab();
+    earnXP('yo-uso',1,1);
+    const sl=getTodayLog();sl['suenos-count']=(sl['suenos-count']||0)+1;saveTodayLog(sl);
+    if(sl['suenos-count']%3===0) earnXP('yo-sueno',1,1);
   }catch{showToast('Error');}
 }
 
@@ -2305,6 +2225,8 @@ async function guardarTurno(){
   try{
     await sb('turnos_medicos','POST',{especialidad,medico,fecha,hora,nota,completado:false});
     closeModal();showToast('Turno agendado ✓');loadSaludTab();
+    earnXP('yo-uso',1,1);
+    earnXP('yo-turno',1,999);
   }catch{showToast('Error');}
 }
 
@@ -2501,6 +2423,8 @@ function init(){
   autoTheme();
   document.getElementById('frase-text').textContent=FRASES[fi];
   registrarSesion();
+  iniciarTimerSesion();
+  updateXPDisplay();
   initNotifications();
   // cada sección carga independientemente
   loadHome();
@@ -2939,8 +2863,11 @@ async function saveRevision(){
 }
 
 // ── STATS ──
-const NIVEL_DESCS=['','Estás poniendo los primeros cimientos. Cada hábito que completás es una piedra que ponés. La racha empieza acá.','La estructura toma forma. No es suerte, es constancia. Estás construyendo algo real.','Ya ves el edificio completo. Nada te detiene. Cuando no tenés ganas, igual aparecés.','Un rascacielos. Tu disciplina ya es parte de quién sos. El 99% no llega acá.','Un monumento a la constancia. Cada día que elegís avanzar es un día que define tu vida.'];
-const NIVEL_NOMBRES=['','Cimientos','Estructura','Edificio','Rascacielos','Monumento'];
+const NIVEL_DESCS=['','Estás poniendo los cimientos. Cada acción suma aunque no lo parezca. El primer paso siempre es el más importante.','Ya hay forma. La constancia empieza a tomar cuerpo. Se nota que esto no fue casualidad.','Se nota el trabajo. Estás construyendo algo real y duradero. La disciplina ya es un hábito en sí mismo.','Pocos llegan acá. Tu disciplina ya es parte de quién sos. Cada día que aparecés es una declaración.','Llegaste. Y seguís. Eso es exactamente lo que te diferencia del resto.'];
+const NIVEL_NOMBRES=['','Base','Estructura','Torre','Rascacielos','Monumento'];
+const NIVEL_XP=[0,0,500,1000,1500,2000];
+function getNivel(xp){ let n=1; for(let i=2;i<=5;i++){if(xp>=NIVEL_XP[i])n=i;} return n; }
+function getXPParaSiguiente(xp){ const n=getNivel(xp); if(n>=5)return null; return NIVEL_XP[n+1]; }
 
 async function loadStats(){
   try{
@@ -3012,7 +2939,7 @@ function toggleStatsHome(){
   const open=el.style.display==='none';
   el.style.display=open?'block':'none';
   if(arrow)arrow.style.transform=open?'rotate(180deg)':'rotate(0)';
-  if(open)loadStats();
+  if(open){loadStats();updateXPDisplay();}
 }
 function toggleNivel(){
   const desc=document.getElementById('stats-nivel-desc');
@@ -3183,8 +3110,23 @@ function openModal(type,extra=''){
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(()=>mc.querySelector('input,textarea')?.focus(),350);
 }
-function handleOverlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function handleOverlayClick(e){
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal-content');
+  if(e.target === overlay || (!modal.contains(e.target) && e.target !== modal)){
+    closeModal();
+  }
+}
+function closeModal(){
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('open');
+  // reset content after animation
+  setTimeout(()=>{ 
+    if(!overlay.classList.contains('open')){
+      document.getElementById('modal-content').innerHTML='';
+    }
+  }, 350);
+}
 function selTag(el){document.querySelectorAll('.modal-tag').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');}
 function selFinTipo(tipo){finTipo=tipo;['gasto','ingreso'].forEach(t=>{document.getElementById(`ftipo-${t}`)?.classList.toggle('selected',t===tipo);});}
 

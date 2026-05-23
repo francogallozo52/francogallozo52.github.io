@@ -685,7 +685,8 @@ function refreshFrase(){
 }
 function switchTab(section, tab){
   // hide all tabs in section
-  const prefix = section===('diario') ? 'diario-tab' : section===('play') ? 'play-tab' : 'agenda-tab';
+  const prefixMap = {diario:'diario-tab', play:'play-tab', agenda:'agenda-tab', yo:'yo-tab'};
+  const prefix = prefixMap[section] || section+'-tab';
   document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.style.display='none');
   document.getElementById(`${prefix}-${tab}`).style.display='';
   // update tab buttons
@@ -2636,7 +2637,8 @@ function refreshFrase(){
 }
 function switchTab(section, tab){
   // hide all tabs in section
-  const prefix = section===('diario') ? 'diario-tab' : section===('play') ? 'play-tab' : 'agenda-tab';
+  const prefixMap = {diario:'diario-tab', play:'play-tab', agenda:'agenda-tab', yo:'yo-tab'};
+  const prefix = prefixMap[section] || section+'-tab';
   document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el=>el.style.display='none');
   document.getElementById(`${prefix}-${tab}`).style.display='';
   // update tab buttons

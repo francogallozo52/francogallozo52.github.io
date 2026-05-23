@@ -89,7 +89,7 @@ html,body{margin:0;padding:0;height:100%;font-family:'DM Sans',sans-serif;backgr
 .racha-day.done{background:var(--accent3)}
 .racha-day.today{background:var(--accent)}
 /* tabs inside sections */
-.tabs{display:flex;gap:0;margin-bottom:16px;background:var(--bg3);border-radius:14px;padding:4px}
+.tabs{display:flex;gap:0;margin-bottom:16px;background:var(--bg3);border-radius:14px;padding:4px;overflow-x:auto}
 .tab{flex:1;text-align:center;padding:8px 4px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-radius:10px;transition:all .2s}
 .tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2)}
 
@@ -300,20 +300,108 @@ select.modal-input{appearance:none;-webkit-appearance:none}
 
     </div>
 
-    <div class="screen" id="screen-habitos">
-      <div class="section-title fu fu1">Hábitos</div>
-      <div class="section-sub fu fu1">Tu constancia, día a día.</div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-label">📊 esta semana</div>
-        <div id="habitos-semana-chart" style="display:flex;justify-content:space-between;align-items:flex-end;height:80px;gap:6px;margin-top:4px"></div>
+    <div class="screen" id="screen-yo">
+      <div class="section-title fu fu1">Yo</div>
+      <div class="tabs fu fu1" style="grid-template-columns:1fr 1fr 1fr 1fr">
+        <div class="tab active" onclick="switchTab('yo','habitos')">✅ Hábitos</div>
+        <div class="tab" onclick="switchTab('yo','entreno')">💪 Entreno</div>
+        <div class="tab" onclick="switchTab('yo','nutricion')">🥗 Nutrición</div>
+        <div class="tab" onclick="switchTab('yo','salud')">🏥 Salud</div>
       </div>
-      <div id="habitos-list"></div>
-      <div style="border:1.5px dashed var(--border);border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;opacity:.7;margin-bottom:10px" onclick="openModal('habito')">
-        <span style="font-size:20px">＋</span><span style="font-size:14px;color:var(--text2)">Agregar hábito</span>
+
+      <!-- TAB: HÁBITOS -->
+      <div id="yo-tab-habitos">
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-label">📊 Esta semana</div>
+          <div id="habitos-semana-chart" style="display:flex;justify-content:space-between;align-items:flex-end;height:80px;gap:6px;margin-top:4px"></div>
+        </div>
+        <div id="habitos-list"></div>
+        <div style="border:1.5px dashed var(--border);border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;opacity:.7;margin-bottom:10px" onclick="openModal('habito')">
+          <span style="font-size:20px">＋</span><span style="font-size:14px;color:var(--text2)">Agregar hábito</span>
+        </div>
+      </div>
+
+      <!-- TAB: ENTRENO -->
+      <div id="yo-tab-entreno" style="display:none">
+        <div id="perfil-entreno-card" class="card fu fu1" style="margin-bottom:14px"></div>
+        <div class="row-between" style="margin-bottom:12px">
+          <div class="section-title" style="font-size:20px;margin:0">Sesiones recientes</div>
+          <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('entreno')">+ Registrar</div>
+        </div>
+        <div id="entreno-list"></div>
+        <div class="card fu" style="margin-top:8px">
+          <div class="card-label">🤖 Sugerencia de hoy</div>
+          <div id="entreno-sugerencia" style="font-size:14px;color:var(--text2);line-height:1.6">Cargando sugerencia...</div>
+          <div style="font-size:12px;color:var(--accent);cursor:pointer;margin-top:10px" onclick="loadEntrenoSugerencia()">↻ otra sugerencia</div>
+        </div>
+        <div class="card fu" style="margin-top:8px">
+          <div class="card-label">📊 Sesiones esta semana</div>
+          <div id="entreno-chart" style="display:flex;justify-content:space-between;align-items:flex-end;height:70px;gap:6px;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- TAB: NUTRICIÓN -->
+      <div id="yo-tab-nutricion" style="display:none">
+        <!-- Peso -->
+        <div id="peso-card" class="card fu fu1" style="margin-bottom:12px"></div>
+        <!-- Agua del día -->
+        <div class="card fu fu2" style="margin-bottom:12px">
+          <div class="row-between" style="margin-bottom:8px">
+            <div class="card-label" style="margin:0">💧 Agua hoy</div>
+            <div style="font-size:13px;color:var(--accent)" id="agua-texto">0 / 2000 ml</div>
+          </div>
+          <div class="level-bar"><div class="level-fill" id="agua-bar" style="width:0%;background:var(--accent2)"></div></div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <div onclick="addAgua(250)" style="padding:6px 14px;background:var(--bg3);border-radius:20px;font-size:13px;cursor:pointer;border:1px solid var(--border)">+250ml</div>
+            <div onclick="addAgua(500)" style="padding:6px 14px;background:var(--bg3);border-radius:20px;font-size:13px;cursor:pointer;border:1px solid var(--border)">+500ml</div>
+            <div onclick="addAgua(750)" style="padding:6px 14px;background:var(--bg3);border-radius:20px;font-size:13px;cursor:pointer;border:1px solid var(--border)">+750ml</div>
+          </div>
+        </div>
+        <!-- Comidas del día -->
+        <div class="card fu fu3" style="margin-bottom:12px">
+          <div class="row-between" style="margin-bottom:10px">
+            <div class="card-label" style="margin:0">🍽️ Comidas de hoy</div>
+            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('comida')">+ Agregar</div>
+          </div>
+          <div id="comidas-list"></div>
+          <div id="calorias-resumen" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)"></div>
+        </div>
+        <!-- Receta sugerida -->
+        <div class="card fu fu4">
+          <div class="card-label">👨‍🍳 Receta sugerida</div>
+          <div id="receta-sugerida" style="font-size:14px;color:var(--text2);line-height:1.6">Cargando receta...</div>
+          <div style="font-size:12px;color:var(--accent);cursor:pointer;margin-top:10px" onclick="loadRecetaSugerida()">↻ otra receta</div>
+        </div>
+      </div>
+
+      <!-- TAB: SALUD -->
+      <div id="yo-tab-salud" style="display:none">
+        <!-- Sueño hoy -->
+        <div class="card fu fu1" style="margin-bottom:12px">
+          <div class="row-between" style="margin-bottom:12px">
+            <div class="card-label" style="margin:0">😴 Sueño de anoche</div>
+            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('sueno')">Registrar</div>
+          </div>
+          <div id="sueno-hoy"></div>
+          <div id="sueno-chart" style="display:flex;justify-content:space-between;align-items:flex-end;height:70px;gap:6px;margin-top:14px"></div>
+        </div>
+        <!-- Turnos médicos -->
+        <div class="card fu fu2" style="margin-bottom:12px">
+          <div class="row-between" style="margin-bottom:12px">
+            <div class="card-label" style="margin:0">🏥 Turnos y chequeos</div>
+            <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('turno')">+ Agregar</div>
+          </div>
+          <div id="turnos-list"></div>
+        </div>
+        <!-- Chequeos sugeridos -->
+        <div class="card fu fu3">
+          <div class="card-label">📋 Chequeos recomendados</div>
+          <div id="chequeos-sugeridos"></div>
+        </div>
       </div>
     </div>
 
-    <div class="screen" id="screen-notas">
+    <div class="screen" id="screen-notas">    <div class="screen" id="screen-notas">
       <div class="section-title fu fu1">Notas & Ideas</div>
       <div class="section-sub fu fu1">Tu segunda memoria.</div>
       <div style="margin-bottom:16px" class="fu fu2">
@@ -470,7 +558,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
   <div class="nav-wrap">
     <div class="nav">
       <div class="nav-item active" onclick="goTo('home',this)"><div class="ni">🏠</div><div class="nl">Inicio</div></div>
-      <div class="nav-item" onclick="goTo('habitos',this)"><div class="ni">✅</div><div class="nl">Hábitos</div></div>
+      <div class="nav-item" onclick="goTo('yo',this)"><div class="ni">💎</div><div class="nl">Yo</div></div>
       <div class="nav-item" onclick="goTo('notas',this)"><div class="ni">💡</div><div class="nl">Notas</div></div>
       <div class="nav-item" onclick="goTo('agenda',this)"><div class="ni">🗓️</div><div class="nl">Agenda</div></div>
       <div class="nav-item" onclick="goTo('play',this)"><div class="ni">🎮</div><div class="nl">Play</div></div>
@@ -585,6 +673,7 @@ function goTo(screen, navItem){
   if(navItem) navItem.classList.add('active');
   document.getElementById('fab-btn').style.display = screenId==='diario'?'none':'flex';
   if(screenId==='agenda'){loadAgenda();loadFinanzas();}
+  if(screenId==='yo'){loadHabitos();}
   if(screenId==='play'){loadLibros(lFilter);loadSeries(sFilter);}
   if(screenId==='diario'){loadDiario();loadRevision();}
   if(screenId==='proyectos') loadProyectos();
@@ -608,6 +697,12 @@ function switchTab(section, tab){
   event.currentTarget?.classList.add('active');
   // load data for tab
   if(section==='agenda'&&tab==='fin') loadFinanzas();
+  if(section==='yo'){
+    if(tab==='habitos') loadHabitos();
+    else if(tab==='entreno') loadEntrenoTab();
+    else if(tab==='nutricion') loadNutricionTab();
+    else if(tab==='salud') loadSaludTab();
+  }
   if(section==='play'&&tab==='libros') loadLibros(lFilter);
   if(section==='play'&&tab==='series') loadSeries(sFilter);
   if(section==='diario'&&tab==='entrada') loadDiario();
@@ -1115,6 +1210,98 @@ function openModal(type,extra=''){
   }
   else if(type==='serie-progreso'){const[id,total]=extra.split('|');html+=`<div class="modal-title">¿Qué episodio vas? 🎬</div><input class="modal-input" id="m-sprog" type="number" placeholder="Episodio actual" max="${total}"><div style="font-size:12px;color:var(--text3);margin-bottom:12px">Total: ${total} episodios</div><button class="btn-primary" onclick="guardarProgSerie('${id}','${total}')">Actualizar ✓</button>`;}
   else if(type==='proyecto'){html+=`<div class="modal-title">Nuevo proyecto 🚀</div><input class="modal-input" id="m-pnom" placeholder="Nombre del proyecto"><div class="modal-row"><input class="modal-input" id="m-picon" placeholder="Ícono 🚀" style="margin-bottom:0"><input class="modal-input" id="m-pdesc" placeholder="Descripción" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarProyecto()" style="margin-top:10px">Crear ✓</button>`;}
+  else if(type==='perfil'){
+    html+=`<div class="modal-title">Tu perfil 💎</div>
+    <div class="modal-row">
+      <input class="modal-input" id="m-ppeso" type="number" step="0.1" placeholder="Peso actual (kg)" style="margin-bottom:0">
+      <input class="modal-input" id="m-pmeta" type="number" step="0.1" placeholder="Peso meta (kg)" style="margin-bottom:0">
+    </div>
+    <div class="modal-row">
+      <input class="modal-input" id="m-paltura" type="number" placeholder="Altura (cm)" style="margin-bottom:0">
+      <select class="modal-input" id="m-pnivel" style="margin-bottom:0">
+        <option value="principiante">Principiante</option>
+        <option value="intermedio">Intermedio</option>
+        <option value="avanzado">Avanzado</option>
+      </select>
+    </div>
+    <select class="modal-input" id="m-pobjetivo">
+      <option value="ganar_musculo">Ganar músculo</option>
+      <option value="perder_peso">Perder peso</option>
+      <option value="resistencia">Mejorar resistencia</option>
+      <option value="bienestar">Salud y bienestar general</option>
+    </select>
+    <button class="btn-primary" onclick="guardarPerfil()">Guardar ✓</button>`;
+  }
+  else if(type==='entreno'){
+    html+=`<div class="modal-title">Registrar sesión 💪</div>
+    <select class="modal-input" id="m-etipo">
+      ${['Calistenia','Natación','Bicicleta','Running','Gym','HIIT','Yoga','Fútbol','Básquet','Otro'].map(t=>`<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <div class="modal-row">
+      <input class="modal-input" id="m-edur" type="number" placeholder="Duración (min)" style="margin-bottom:0">
+      <select class="modal-input" id="m-eint" style="margin-bottom:0">
+        <option value="">Intensidad...</option>
+        <option value="Suave">Suave</option>
+        <option value="Moderada">Moderada</option>
+        <option value="Intensa">Intensa</option>
+      </select>
+    </div>
+    <input class="modal-input" id="m-efecha2" type="date" value="${today()}">
+    <textarea class="modal-textarea" id="m-enotas" placeholder="Notas opcionales (ej: hice 3x10 flexiones)"></textarea>
+    <button class="btn-primary" onclick="guardarEntreno()">Guardar ✓</button>`;
+  }
+  else if(type==='comida'){
+    html+=`<div class="modal-title">Agregar comida 🍽️</div>
+    <input class="modal-input" id="m-cnombre" placeholder="Nombre (ej: Milanesa con ensalada)">
+    <div class="modal-row">
+      <input class="modal-input" id="m-ccal" type="number" placeholder="Calorías aprox." style="margin-bottom:0">
+      <input class="modal-input" id="m-cicono" placeholder="Ícono 🍽️" style="margin-bottom:0">
+    </div>
+    <div class="modal-row">
+      <input class="modal-input" id="m-cprot" type="number" placeholder="Proteínas (g)" style="margin-bottom:0">
+      <input class="modal-input" id="m-ccarb" type="number" placeholder="Carbos (g)" style="margin-bottom:0">
+    </div>
+    <button class="btn-primary" onclick="guardarComida()" style="margin-top:4px">Agregar ✓</button>`;
+  }
+  else if(type==='peso'){
+    html+=`<div class="modal-title">Registrar peso ⚖️</div>
+    <input class="modal-input" id="m-wkg" type="number" step="0.1" placeholder="Peso (kg)">
+    <input class="modal-input" id="m-wfecha" type="date" value="${today()}">
+    <input class="modal-input" id="m-wnota" placeholder="Nota opcional">
+    <button class="btn-primary" onclick="guardarPeso()">Guardar ✓</button>`;
+  }
+  else if(type==='sueno'){
+    html+=`<div class="modal-title">Registrar sueño 😴</div>
+    <div class="modal-row">
+      <div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Me dormí</div>
+        <input class="modal-input" id="m-sdormir" type="time" style="margin-bottom:0">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">Me desperté</div>
+        <input class="modal-input" id="m-sdespertar" type="time" style="margin-bottom:0">
+      </div>
+    </div>
+    <div style="margin:10px 0">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Calidad del sueño</div>
+      <div style="display:flex;gap:8px">
+        ${[1,2,3,4,5].map(n=>`<div onclick="selCalidadSueno(${n})" id="cal-sueno-${n}" style="flex:1;text-align:center;padding:8px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;font-size:18px">${n<=2?'😴':n<=3?'😐':n<=4?'🙂':'😊'}</div>`).join('')}
+      </div>
+    </div>
+    <textarea class="modal-textarea" id="m-snota" placeholder="Nota opcional (ej: me desperté varias veces)"></textarea>
+    <button class="btn-primary" onclick="guardarSueno()">Guardar ✓</button>`;
+  }
+  else if(type==='turno'){
+    html+=`<div class="modal-title">Turno médico 🏥</div>
+    <input class="modal-input" id="m-tesp" placeholder="Especialidad" value="${extra||''}">
+    <input class="modal-input" id="m-tmed" placeholder="Médico (opcional)">
+    <div class="modal-row">
+      <input class="modal-input" id="m-tfecha2" type="date" style="margin-bottom:0">
+      <input class="modal-input" id="m-thora" type="time" style="margin-bottom:0">
+    </div>
+    <textarea class="modal-textarea" id="m-tnota" placeholder="Nota (ej: llevar estudios anteriores)"></textarea>
+    <button class="btn-primary" onclick="guardarTurno()">Agendar ✓</button>`;
+  }
   else if(type==='subtarea'){html+=`<div class="modal-title">Nueva tarea</div><input class="modal-input" id="m-stexto" placeholder="¿Qué hay que hacer?"><button class="btn-primary" onclick="guardarSubtarea('${extra}')">Agregar ✓</button>`;}
   mc.innerHTML=html;
   document.getElementById('modal-overlay').classList.add('open');
@@ -1760,6 +1947,441 @@ async function checkEventReminders(){
       }
     }
   }catch(e){}
+}
+
+
+// ── ENTRENO ──
+const TIPOS_ENTRENO = ['Calistenia','Natación','Bicicleta','Running','Gym','HIIT','Yoga','Fútbol','Básquet','Otro'];
+const SUGERENCIAS_ENTRENO = {
+  principiante: [
+    '💪 Calistenia 20 min — 3x10 sentadillas, 3x8 flexiones, 3x15 abdominales. Descansá 60s entre series.',
+    '🚶 Caminata rápida 30 min. Mantené un ritmo donde puedas hablar pero te cueste un poco.',
+    '🤸 Movilidad y stretching 20 min. Ideal para arrancar el día.',
+    '🚴 Bici suave 30 min. Ritmo constante, sin apuro.',
+    '💧 Natación 20 min. Estilo libre, 4 largos y descansás 30s.',
+  ],
+  intermedio: [
+    '💪 Calistenia 35 min — 4x12 flexiones, 4x15 sentadillas, 3x10 fondos, 3x20 abdominales.',
+    '🏃 Running 25 min a ritmo moderado. Calentá 5 min caminando.',
+    '🏊 Natación 35 min. Alterná estilos cada 4 largos.',
+    '🚴 Bici 45 min con 3 intervalos de 3 min a alta intensidad.',
+    '💪 HIIT 20 min — 40s trabajo / 20s descanso x 10 ejercicios.',
+  ]
+};
+
+async function loadEntrenoTab(){
+  // Load perfil
+  try{
+    const perfil = await sb('perfil','GET',null,'?limit=1');
+    const p = perfil[0];
+    const perfilEl = document.getElementById('perfil-entreno-card');
+    if(perfilEl){
+      if(!p){
+        perfilEl.innerHTML = `<div class="card-label">Tu perfil</div>
+          <div style="font-size:14px;color:var(--text2);margin-bottom:12px">Completá tu perfil para recibir sugerencias personalizadas</div>
+          <button class="btn-primary" onclick="openModal('perfil')">Completar perfil</button>`;
+      } else {
+        const imc = p.peso_actual && p.altura ? (p.peso_actual / ((p.altura/100)**2)).toFixed(1) : null;
+        perfilEl.innerHTML = `<div class="card-label">Tu perfil</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            ${p.peso_actual?`<div style="text-align:center"><div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--accent)">${p.peso_actual}kg</div><div style="font-size:11px;color:var(--text3)">Peso actual</div></div>`:''}
+            ${p.peso_meta?`<div style="text-align:center"><div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--accent3)">${p.peso_meta}kg</div><div style="font-size:11px;color:var(--text3)">Meta</div></div>`:''}
+            ${imc?`<div style="text-align:center"><div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--accent2)">${imc}</div><div style="font-size:11px;color:var(--text3)">IMC</div></div>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--accent);cursor:pointer;margin-top:10px" onclick="openModal('perfil')">✏ Editar perfil</div>`;
+      }
+    }
+  }catch(e){console.warn('perfil:',e);}
+
+  // Load recent sessions
+  try{
+    const sesiones = await sb('entrenamientos','GET',null,'?order=fecha.desc&limit=7');
+    const el = document.getElementById('entreno-list');
+    if(!sesiones.length){
+      el.innerHTML = `<div class="empty"><div class="ei">💪</div><div class="et">Registrá tu primera sesión</div></div>`;
+    } else {
+      el.innerHTML = sesiones.map(s=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="width:40px;height:40px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">
+            ${s.tipo==='Natación'?'🏊':s.tipo==='Bicicleta'?'🚴':s.tipo==='Running'?'🏃':s.tipo==='Yoga'?'🧘':s.tipo==='HIIT'?'⚡':'💪'}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500">${s.tipo}</div>
+            <div style="font-size:12px;color:var(--text3)">${fmtDate(s.fecha)}${s.duracion?' · '+s.duracion+' min':''} ${s.intensidad?'· '+s.intensidad:''}</div>
+            ${s.notas?`<div style="font-size:12px;color:var(--text2);margin-top:2px">${s.notas}</div>`:''}
+          </div>
+          <div onclick="delEntreno('${s.id}')" style="color:var(--text3);cursor:pointer;font-size:16px;padding:4px">✕</div>
+        </div>`).join('');
+    }
+
+    // Chart
+    const DL=['D','L','M','M','J','V','S'];
+    const d7=[];
+    for(let i=6;i>=0;i--){const d=daysAgo(i);d7.push(d);}
+    const chartEl = document.getElementById('entreno-chart');
+    if(chartEl){
+      chartEl.innerHTML = d7.map((day,i)=>{
+        const hasSesion = sesiones.some(s=>s.fecha===day);
+        const jsDay = new Date(day+'T12:00:00').getDay();
+        const isToday = i===6;
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="flex:1;width:100%;background:var(--bg4);border-radius:6px;position:relative;overflow:hidden;min-height:50px">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:${hasSesion?'100':'0'}%;background:var(--accent);border-radius:6px;transition:height .5s"></div>
+          </div>
+          <div style="font-size:10px;color:${isToday?'var(--accent)':'var(--text3)'};font-weight:${isToday?600:400}">${DL[jsDay]}</div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){console.warn('entreno:',e);}
+
+  loadEntrenoSugerencia();
+}
+
+async function loadEntrenoSugerencia(){
+  const el = document.getElementById('entreno-sugerencia');
+  if(!el) return;
+  try{
+    const perfil = await sb('perfil','GET',null,'?limit=1');
+    const nivel = perfil[0]?.nivel || 'principiante';
+    const sugs = SUGERENCIAS_ENTRENO[nivel] || SUGERENCIAS_ENTRENO.principiante;
+    el.textContent = sugs[Math.floor(Math.random()*sugs.length)];
+  }catch{
+    el.textContent = '💪 Hoy es un buen día para mover el cuerpo. Aunque sean 20 minutos.';
+  }
+}
+
+async function delEntreno(id){
+  try{await sb('entrenamientos','DELETE',null,`?id=eq.${id}`);loadEntrenoTab();showToast('Sesión eliminada');}catch{}
+}
+
+// ── NUTRICIÓN ──
+async function loadNutricionTab(){
+  // Peso
+  try{
+    const registros = await sb('peso_registro','GET',null,'?order=fecha.desc&limit=10');
+    const perfil = await sb('perfil','GET',null,'?limit=1');
+    const pesoEl = document.getElementById('peso-card');
+    if(pesoEl){
+      const ultimo = registros[0];
+      const meta = perfil[0]?.peso_meta;
+      const actual = ultimo?.peso || perfil[0]?.peso_actual;
+      const diff = meta && actual ? (actual - meta).toFixed(1) : null;
+      pesoEl.innerHTML = `<div class="card-label">⚖️ Peso</div>
+        <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:12px">
+          <div>
+            <div style="font-family:'DM Serif Display',serif;font-size:42px;color:var(--text);line-height:1">${actual||'—'}</div>
+            <div style="font-size:12px;color:var(--text3)">kg actuales</div>
+          </div>
+          ${meta?`<div>
+            <div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--accent3);line-height:1">${meta}</div>
+            <div style="font-size:12px;color:var(--text3)">kg meta</div>
+          </div>`:''}
+          ${diff?`<div>
+            <div style="font-family:'DM Serif Display',serif;font-size:24px;color:${parseFloat(diff)>0?'var(--accent)':'var(--accent3)'};line-height:1">${parseFloat(diff)>0?'+':''}${diff}</div>
+            <div style="font-size:12px;color:var(--text3)">diferencia</div>
+          </div>`:''}
+        </div>
+        ${registros.length>1?`<div style="display:flex;justify-content:space-between;align-items:flex-end;height:50px;gap:4px;margin-bottom:10px">
+          ${registros.slice(0,7).reverse().map(r=>{
+            const maxP=Math.max(...registros.map(x=>x.peso));
+            const minP=Math.min(...registros.map(x=>x.peso));
+            const range=maxP-minP||1;
+            const pct=Math.round(((r.peso-minP)/range)*80)+10;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+              <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+                <div style="width:100%;height:${pct}%;background:var(--accent2);border-radius:4px 4px 0 0"></div>
+              </div>
+              <div style="font-size:9px;color:var(--text3)">${r.peso}</div>
+            </div>`;
+          }).join('')}
+        </div>`:''}
+        <div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('peso')">+ Registrar peso</div>`;
+    }
+  }catch(e){console.warn('peso:',e);}
+
+  // Agua y comidas
+  try{
+    const nutri = await sb('nutricion','GET',null,`?fecha=eq.${today()}`);
+    const n = nutri[0];
+    const aguaMl = n?.agua_ml || 0;
+    const aguaMeta = 2000;
+    const aguaPct = Math.min(100, Math.round(aguaMl/aguaMeta*100));
+    document.getElementById('agua-texto').textContent = `${aguaMl} / ${aguaMeta} ml`;
+    document.getElementById('agua-bar').style.width = aguaPct+'%';
+
+    const comidas = n?.comidas || [];
+    const totalCal = comidas.reduce((a,c)=>a+(c.calorias||0),0);
+    const comidasEl = document.getElementById('comidas-list');
+    if(comidasEl){
+      comidasEl.innerHTML = comidas.length ? comidas.map((c,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:20px">${c.icono||'🍽️'}</div>
+          <div style="flex:1">
+            <div style="font-size:14px">${c.nombre}</div>
+            ${c.calorias?`<div style="font-size:12px;color:var(--text3)">${c.calorias} kcal</div>`:''}
+          </div>
+          <div onclick="removeComida(${i})" style="color:var(--text3);cursor:pointer;font-size:14px">✕</div>
+        </div>`).join('') : `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Sin comidas registradas hoy</div>`;
+    }
+    const calEl = document.getElementById('calorias-resumen');
+    if(calEl && totalCal > 0){
+      calEl.innerHTML = `Total del día: <strong style="color:var(--accent)">${totalCal} kcal</strong>`;
+    }
+  }catch(e){console.warn('nutricion:',e);}
+
+  loadRecetaSugerida();
+}
+
+async function addAgua(ml){
+  try{
+    const existing = await sb('nutricion','GET',null,`?fecha=eq.${today()}`);
+    if(existing.length){
+      const nuevo = (existing[0].agua_ml||0) + ml;
+      await sb('nutricion','PATCH',{agua_ml:nuevo},`?fecha=eq.${today()}`);
+    } else {
+      await sb('nutricion','POST',{fecha:today(),agua_ml:ml,comidas:[]});
+    }
+    loadNutricionTab();
+    showToast(`+${ml}ml 💧`);
+  }catch(e){showToast('Error');}
+}
+
+async function removeComida(idx){
+  try{
+    const existing = await sb('nutricion','GET',null,`?fecha=eq.${today()}`);
+    if(!existing.length) return;
+    const comidas = existing[0].comidas || [];
+    comidas.splice(idx,1);
+    await sb('nutricion','PATCH',{comidas},`?fecha=eq.${today()}`);
+    loadNutricionTab();
+  }catch{}
+}
+
+const RECETAS = [
+  {nombre:'🥗 Bowl de pollo y quinoa', cal:480, desc:'Quinoa cocida, pechuga de pollo a la plancha, palta, tomate cherry y limón. Rápido y completo.'},
+  {nombre:'🍳 Huevos revueltos con avena', cal:380, desc:'3 huevos revueltos con vegetales salteados y un bol de avena con banana. Ideal post-entreno.'},
+  {nombre:'🥩 Milanesa de soja con ensalada', cal:420, desc:'Milanesa de soja al horno, ensalada mixta con aceite de oliva. Alta en proteínas vegetales.'},
+  {nombre:'🍝 Fideos con salsa de tomate casera', cal:520, desc:'Fideos integrales con salsa de tomate, albahaca y queso rallado. Carbos de calidad.'},
+  {nombre:'🥤 Smoothie proteico', cal:320, desc:'Leche, banana, manteca de maní, avena y una cucharada de cacao. Desayuno energético.'},
+  {nombre:'🐟 Salmón a la plancha con batata', cal:490, desc:'Salmón con limón y especias, batata asada y brócoli al vapor. Omega-3 y fibra.'},
+  {nombre:'🫘 Guiso de lentejas', cal:440, desc:'Lentejas con verduras, comino y laurel. Alto en hierro, proteínas y fibra.'},
+];
+
+function loadRecetaSugerida(){
+  const el = document.getElementById('receta-sugerida');
+  if(!el) return;
+  const r = RECETAS[Math.floor(Math.random()*RECETAS.length)];
+  el.innerHTML = `<strong style="color:var(--text)">${r.nombre}</strong> · ${r.cal} kcal<br><span style="color:var(--text2)">${r.desc}</span>`;
+}
+
+// ── SALUD ──
+const CHEQUEOS_RECOMENDADOS = [
+  {icono:'🩺', nombre:'Médico clínico general', frecuencia:'1 vez al año'},
+  {icono:'🦷', nombre:'Dentista', frecuencia:'Cada 6 meses'},
+  {icono:'👁️', nombre:'Oftalmólogo', frecuencia:'1 vez al año'},
+  {icono:'🩸', nombre:'Análisis de sangre completo', frecuencia:'1 vez al año'},
+  {icono:'❤️', nombre:'Cardiológico', frecuencia:'Cada 2 años'},
+  {icono:'🧠', nombre:'Chequeo neurológico', frecuencia:'Según necesidad'},
+  {icono:'🏃', nombre:'Apto físico deportivo', frecuencia:'1 vez al año si hacés deporte'},
+];
+
+async function loadSaludTab(){
+  // Sueño
+  try{
+    const suenos = await sb('sueno','GET',null,'?order=fecha.desc&limit=7');
+    const hoy = suenos.find(s=>s.fecha===today());
+    const suenoEl = document.getElementById('sueno-hoy');
+    if(suenoEl){
+      if(hoy){
+        const estrellas = '⭐'.repeat(hoy.calidad||0) + '☆'.repeat(5-(hoy.calidad||0));
+        suenoEl.innerHTML = `<div style="display:flex;align-items:center;gap:16px">
+          <div style="text-align:center">
+            <div style="font-family:'DM Serif Display',serif;font-size:36px;color:var(--accent2)">${hoy.horas_dormidas||'—'}</div>
+            <div style="font-size:12px;color:var(--text3)">horas</div>
+          </div>
+          <div>
+            <div style="font-size:14px">${hoy.hora_dormir||''} → ${hoy.hora_despertar||''}</div>
+            <div style="font-size:16px;margin-top:4px">${estrellas}</div>
+            ${hoy.nota?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${hoy.nota}</div>`:''}
+          </div>
+        </div>`;
+      } else {
+        suenoEl.innerHTML = `<div style="text-align:center;padding:12px;color:var(--text3);font-size:13px">No registraste el sueño de anoche</div>`;
+      }
+    }
+
+    // Sueño chart
+    const chartEl = document.getElementById('sueno-chart');
+    if(chartEl && suenos.length){
+      const DL=['D','L','M','M','J','V','S'];
+      const d7=[];
+      for(let i=6;i>=0;i--) d7.push(daysAgo(i));
+      const maxH = Math.max(...suenos.map(s=>s.horas_dormidas||0), 8);
+      chartEl.innerHTML = d7.map((day,i)=>{
+        const s = suenos.find(x=>x.fecha===day);
+        const h = s?.horas_dormidas || 0;
+        const pct = Math.round((h/maxH)*100);
+        const jsDay = new Date(day+'T12:00:00').getDay();
+        const color = h>=7?'var(--accent3)':h>=5?'var(--accent4)':'var(--red)';
+        const isToday = i===6;
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:9px;color:var(--text3);min-height:12px">${h>0?h+'h':''}</div>
+          <div style="flex:1;width:100%;background:var(--bg4);border-radius:6px;position:relative;overflow:hidden;min-height:40px">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:${color};border-radius:6px;transition:height .5s"></div>
+          </div>
+          <div style="font-size:10px;color:${isToday?'var(--accent2)':'var(--text3)'};font-weight:${isToday?600:400}">${DL[jsDay]}</div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){console.warn('sueno:',e);}
+
+  // Turnos
+  try{
+    const turnos = await sb('turnos_medicos','GET',null,'?order=fecha.asc&completado=eq.false');
+    const el = document.getElementById('turnos-list');
+    if(el){
+      el.innerHTML = turnos.length ? turnos.map(t=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:22px">🏥</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500">${t.especialidad}</div>
+            ${t.medico?`<div style="font-size:12px;color:var(--text2)">${t.medico}</div>`:''}
+            ${t.fecha?`<div style="font-size:12px;color:var(--text3)">${fmtDate(t.fecha)}${t.hora?' · '+t.hora:''}</div>`:''}
+          </div>
+          <div onclick="completarTurno('${t.id}')" style="font-size:12px;color:var(--accent3);cursor:pointer;padding:4px">✓</div>
+          <div onclick="delTurno('${t.id}')" style="font-size:14px;color:var(--text3);cursor:pointer;padding:4px">✕</div>
+        </div>`).join('') :
+        `<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">Sin turnos pendientes</div>`;
+    }
+  }catch(e){console.warn('turnos:',e);}
+
+  // Chequeos sugeridos
+  const cheqEl = document.getElementById('chequeos-sugeridos');
+  if(cheqEl){
+    cheqEl.innerHTML = CHEQUEOS_RECOMENDADOS.map(c=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:20px">${c.icono}</div>
+        <div style="flex:1">
+          <div style="font-size:14px">${c.nombre}</div>
+          <div style="font-size:12px;color:var(--text3)">${c.frecuencia}</div>
+        </div>
+        <div onclick="openModal('turno','${c.nombre}')" style="font-size:11px;color:var(--accent);cursor:pointer;padding:4px">+ Agendar</div>
+      </div>`).join('');
+  }
+}
+
+async function completarTurno(id){
+  try{await sb('turnos_medicos','PATCH',{completado:true},`?id=eq.${id}`);loadSaludTab();showToast('Turno completado ✓');}catch{}
+}
+async function delTurno(id){
+  try{await sb('turnos_medicos','DELETE',null,`?id=eq.${id}`);loadSaludTab();}catch{}
+}
+
+
+// ── GUARDAR FUNCIONES YO ──
+let calidadSueno = 3;
+function selCalidadSueno(n){
+  calidadSueno = n;
+  [1,2,3,4,5].forEach(i=>{
+    const el = document.getElementById(`cal-sueno-${i}`);
+    if(el) el.style.background = i<=n ? 'var(--accent2)' : '';
+    if(el) el.style.borderColor = i<=n ? 'var(--accent2)' : 'var(--border)';
+  });
+}
+
+async function guardarPerfil(){
+  const peso_actual = parseFloat(document.getElementById('m-ppeso')?.value)||null;
+  const peso_meta = parseFloat(document.getElementById('m-pmeta')?.value)||null;
+  const altura = parseFloat(document.getElementById('m-paltura')?.value)||null;
+  const nivel = document.getElementById('m-pnivel')?.value||'principiante';
+  const objetivo = document.getElementById('m-pobjetivo')?.value||'bienestar';
+  try{
+    const existing = await sb('perfil','GET',null,'?limit=1');
+    if(existing.length) await sb('perfil','PATCH',{peso_actual,peso_meta,altura,nivel,objetivo},`?id=eq.${existing[0].id}`);
+    else await sb('perfil','POST',{peso_actual,peso_meta,altura,nivel,objetivo});
+    closeModal();showToast('Perfil guardado ✓');loadEntrenoTab();loadNutricionTab();
+  }catch{showToast('Error');}
+}
+
+async function guardarEntreno(){
+  const tipo = document.getElementById('m-etipo')?.value;
+  const duracion = parseInt(document.getElementById('m-edur')?.value)||null;
+  const intensidad = document.getElementById('m-eint')?.value||null;
+  const fecha = document.getElementById('m-efecha2')?.value||today();
+  const notas = document.getElementById('m-enotas')?.value.trim()||null;
+  if(!tipo){showToast('Elegí un tipo');return;}
+  try{
+    await sb('entrenamientos','POST',{tipo,duracion,intensidad,fecha,notas});
+    closeModal();showToast('Sesión registrada ✓');loadEntrenoTab();
+  }catch{showToast('Error');}
+}
+
+async function guardarComida(){
+  const nombre = document.getElementById('m-cnombre')?.value.trim();
+  const calorias = parseInt(document.getElementById('m-ccal')?.value)||0;
+  const icono = document.getElementById('m-cicono')?.value.trim()||'🍽️';
+  const proteinas = parseInt(document.getElementById('m-cprot')?.value)||0;
+  const carbos = parseInt(document.getElementById('m-ccarb')?.value)||0;
+  if(!nombre){showToast('Poné un nombre');return;}
+  try{
+    const existing = await sb('nutricion','GET',null,`?fecha=eq.${today()}`);
+    const comida = {nombre,calorias,icono,proteinas,carbos};
+    if(existing.length){
+      const comidas = [...(existing[0].comidas||[]), comida];
+      await sb('nutricion','PATCH',{comidas},`?fecha=eq.${today()}`);
+    } else {
+      await sb('nutricion','POST',{fecha:today(),comidas:[comida],agua_ml:0});
+    }
+    closeModal();showToast('Comida agregada ✓');loadNutricionTab();
+  }catch{showToast('Error');}
+}
+
+async function guardarPeso(){
+  const peso = parseFloat(document.getElementById('m-wkg')?.value);
+  const fecha = document.getElementById('m-wfecha')?.value||today();
+  const nota = document.getElementById('m-wnota')?.value.trim()||null;
+  if(!peso){showToast('Ingresá tu peso');return;}
+  try{
+    await sb('peso_registro','POST',{peso,fecha,nota});
+    // update perfil too
+    const perfil = await sb('perfil','GET',null,'?limit=1');
+    if(perfil.length) await sb('perfil','PATCH',{peso_actual:peso},`?id=eq.${perfil[0].id}`);
+    closeModal();showToast('Peso registrado ✓');loadNutricionTab();
+  }catch{showToast('Error');}
+}
+
+async function guardarSueno(){
+  const hora_dormir = document.getElementById('m-sdormir')?.value||null;
+  const hora_despertar = document.getElementById('m-sdespertar')?.value||null;
+  const nota = document.getElementById('m-snota')?.value.trim()||null;
+  let horas_dormidas = null;
+  if(hora_dormir && hora_despertar){
+    const [h1,m1] = hora_dormir.split(':').map(Number);
+    const [h2,m2] = hora_despertar.split(':').map(Number);
+    let mins = (h2*60+m2) - (h1*60+m1);
+    if(mins < 0) mins += 24*60;
+    horas_dormidas = Math.round(mins/60*10)/10;
+  }
+  try{
+    const existing = await sb('sueno','GET',null,`?fecha=eq.${today()}`);
+    const data = {hora_dormir,hora_despertar,horas_dormidas,calidad:calidadSueno,nota};
+    if(existing.length) await sb('sueno','PATCH',data,`?fecha=eq.${today()}`);
+    else await sb('sueno','POST',{...data,fecha:today()});
+    closeModal();showToast('Sueño registrado ✓');loadSaludTab();
+  }catch{showToast('Error');}
+}
+
+async function guardarTurno(){
+  const especialidad = document.getElementById('m-tesp')?.value.trim();
+  const medico = document.getElementById('m-tmed')?.value.trim()||null;
+  const fecha = document.getElementById('m-tfecha2')?.value||null;
+  const hora = document.getElementById('m-thora')?.value||null;
+  const nota = document.getElementById('m-tnota')?.value.trim()||null;
+  if(!especialidad){showToast('Poné la especialidad');return;}
+  try{
+    await sb('turnos_medicos','POST',{especialidad,medico,fecha,hora,nota,completado:false});
+    closeModal();showToast('Turno agendado ✓');loadSaludTab();
+  }catch{showToast('Error');}
 }
 
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -219,6 +219,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
 </head>
 <body>
 <div id="app">
+
   <div class="topbar">
     <div class="topbar-logo">Fran<span>OS</span></div>
     <div class="topbar-right">
@@ -226,6 +227,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
       <div class="icon-btn">🔔</div>
     </div>
   </div>
+
   <div class="screens">
     <div class="screen active" id="screen-home">
       <div class="fu fu1" style="margin-bottom:24px">
@@ -555,7 +557,9 @@ select.modal-input{appearance:none;-webkit-appearance:none}
       </div>
   </div><!-- /screens -->
 
-  </div><!-- screens -->
+
+  </div>
+
   <div class="nav-wrap">
     <div class="nav">
       <div class="nav-item active" onclick="goTo('home',this)"><div class="ni">🏠</div><div class="nl">Inicio</div></div>
@@ -573,8 +577,8 @@ select.modal-input{appearance:none;-webkit-appearance:none}
     <div class="modal" id="modal-content"></div>
   </div>
   <div class="toast" id="toast"></div>
-</div>
 
+</div>
 <script>
 const SB='https://krwhztaukojthcdsnpjn.supabase.co';
 const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtyd2h6dGF1a29qdGhjZHNucGpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzOTQwNDAsImV4cCI6MjA5NDk3MDA0MH0.KLA6zLCOw6H_nhzEbra1QRTaYrUWKY3dH01dP7PnL-w';
@@ -2229,7 +2233,6 @@ async function loadSaludTab(){
           <div style="font-size:9px;color:var(--text3);min-height:12px">${h>0?h+'h':''}</div>
           <div style="flex:1;width:100%;background:var(--bg4);border-radius:6px;position:relative;overflow:hidden;min-height:40px">
             <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:${color};border-radius:6px;transition:height .5s"></div>
-            
           </div>
           <div style="font-size:10px;color:${isToday?'var(--accent2)':'var(--text3)'};font-weight:${isToday?600:400}">${DL[jsDay]}</div>
         </div>`;
@@ -2511,8 +2514,6 @@ async function scheduleEventReminders(){
 init();
 initOneSignal();
 setInterval(()=>{scheduleNotifications();checkEventReminders();}, 60000);
-
-
 </script>
 </body>
 </html>

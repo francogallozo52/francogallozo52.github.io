@@ -218,9 +218,9 @@ select.modal-input{appearance:none;-webkit-appearance:none}
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" style="position:fixed;top:0;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden">
 
-  <div class="topbar">
+  <div class="topbar" style="height:60px;min-height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px">
     <div class="topbar-logo">Fran<span>OS</span></div>
     <div class="topbar-right">
       <div class="icon-btn" id="theme-btn" onclick="toggleTheme()">🌙</div>
@@ -228,7 +228,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
     </div>
   </div>
 
-  <div class="screens">
+  <div class="screens" style="flex:1;overflow:hidden;position:relative;min-height:0">
     <div class="screen active" id="screen-home">
       <div class="fu fu1" style="margin-bottom:24px">
         <div class="home-time" id="home-time"></div>
@@ -560,7 +560,7 @@ select.modal-input{appearance:none;-webkit-appearance:none}
 
   </div>
 
-  <div class="nav-wrap">
+  <div class="nav-wrap" style="height:65px;min-height:65px;flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border)">
     <div class="nav">
       <div class="nav-item active" onclick="goTo('home',this)"><div class="ni">🏠</div><div class="nl">Inicio</div></div>
       <div class="nav-item" onclick="goTo('yo',this)"><div class="ni">💎</div><div class="nl">Yo</div></div>

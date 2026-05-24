@@ -1018,16 +1018,10 @@ function buildCalendar(){
   const rem=42-first-dim;
   for(let i=1;i<=rem;i++)html+=`<div class="cal-day other-month">${i}</div>`;
   document.getElementById('cal-grid').innerHTML=html;
-  // dato del dia
-  const dato=getDatoDia(today());
-  const feriado=getFeriado(today());
+  // dato del dia - load from Wikipedia API
   const tituloEl=document.getElementById('dato-dia-titulo');
-  const detalleEl=document.getElementById('dato-dia-detalle');
-  if(tituloEl){
-    if(feriado){tituloEl.textContent=`🗓️ Hoy es feriado: ${feriado.nombre}`;if(detalleEl)detalleEl.textContent=feriado.detalle;}
-    else if(dato){tituloEl.textContent=dato.titulo;if(detalleEl)detalleEl.textContent=dato.detalle;}
-    else{tituloEl.textContent='Sin dato especial para hoy';if(detalleEl)detalleEl.textContent='';}
-  }
+  if(tituloEl) tituloEl.textContent='Cargando...';
+  loadDatoWikipedia();
 }
 function toggleDatoDia(){
   const det=document.getElementById('dato-dia-detalle');
@@ -1597,6 +1591,57 @@ function getDatoDia(fecha) {
   const [,m,d] = fecha.split('-');
   const key = `${m}-${d}`;
   return DATOS_DIA[key] || null;
+}
+
+async function loadDatoWikipedia(){
+  const tituloEl = document.getElementById('dato-dia-titulo');
+  const detalleEl = document.getElementById('dato-dia-detalle');
+  if(!tituloEl) return;
+  
+  // Check feriado first
+  const feriado = getFeriado(today());
+  if(feriado){
+    tituloEl.textContent = '🗓️ Hoy es feriado: ' + feriado.nombre;
+    if(detalleEl) detalleEl.textContent = feriado.detalle;
+    return;
+  }
+  
+  // Try Wikipedia "On this day" API
+  try{
+    const now = nowAR();
+    const month = String(now.getMonth()+1).padStart(2,'0');
+    const day = String(now.getDate()).padStart(2,'0');
+    const url = `https://api.wikimedia.org/feed/v1/wikipedia/es/onthisday/events/${month}/${day}`;
+    const res = await fetch(url, {headers:{'Api-User-Agent':'FranOS/1.0'}});
+    const data = await res.json();
+    const events = data.events || [];
+    if(events.length > 0){
+      // Pick a random interesting event
+      const ev = events[Math.floor(Math.random() * Math.min(events.length, 5))];
+      const year = ev.year;
+      const text = ev.text;
+      tituloEl.textContent = `📅 ${year}: ${text.length > 80 ? text.substring(0,80)+'...' : text}`;
+      if(detalleEl) detalleEl.textContent = text;
+    } else {
+      // Fallback to hardcoded
+      const dato = getDatoDia(today());
+      if(dato){
+        tituloEl.textContent = dato.titulo;
+        if(detalleEl) detalleEl.textContent = dato.detalle;
+      } else {
+        tituloEl.textContent = 'Sin dato especial para hoy';
+      }
+    }
+  }catch(e){
+    // Fallback to hardcoded data
+    const dato = getDatoDia(today());
+    if(dato){
+      tituloEl.textContent = dato.titulo;
+      if(detalleEl) detalleEl.textContent = dato.detalle;
+    } else {
+      tituloEl.textContent = 'Sin dato especial para hoy';
+    }
+  }
 }
 function getFeriado(fecha) {
   return FERIADOS_AR[fecha] || null;

@@ -1608,6 +1608,13 @@ async function loadSugerencia() {
   }
 }
 
+function irASugerencia(){
+  const card = document.getElementById('sugerencia-card');
+  const screen = card && card.dataset.screen ? card.dataset.screen : 'home';
+  const navItem = document.querySelector(`.nav-item[onclick*="'${screen}'"]`);
+  goTo(screen, navItem);
+}
+
 function mostrarSugerencia() {
   const el = document.getElementById('sugerencia-text');
   if (!el) return;

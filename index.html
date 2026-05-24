@@ -766,9 +766,98 @@ function updateXPDisplay(){
 }
 
 
+// ── SISTEMA DE XP ──
+const XP_KEY = 'franos-xp';
+const XP_LOG_KEY = 'franos-xp-log';
+const RACHA_KEY = 'franos-racha';
+const SESION_KEY = 'franos-last-sesion';
+
+function getXP(){ try{return parseInt(localStorage.getItem(XP_KEY)||'0');}catch{return 0;} }
+function setXP(v){ try{localStorage.setItem(XP_KEY, Math.max(0,v));}catch{} }
+
+function getTodayLog(){
+  try{
+    const raw = localStorage.getItem(XP_LOG_KEY);
+    const log = raw ? JSON.parse(raw) : {};
+    if(log.fecha !== today()) return {fecha:today()};
+    return log;
+  }catch{ return {fecha:today()}; }
+}
+function saveTodayLog(log){ try{localStorage.setItem(XP_LOG_KEY, JSON.stringify(log));}catch{} }
+
+function earnXP(motivo, puntos, maxPorDia=1){
+  const log = getTodayLog();
+  const count = log[motivo] || 0;
+  if(maxPorDia !== 999 && count >= maxPorDia) return 0;
+  log[motivo] = count + 1;
+  saveTodayLog(log);
+  setXP(getXP() + puntos);
+  showToast(`+${puntos} XP ⚡`);
+  return puntos;
+}
+
+// Racha - 36 horas = 1.5 dias
+function getRacha(){
+  try{
+    const data = JSON.parse(localStorage.getItem(RACHA_KEY)||'{"dias":0,"ultimo":""}');
+    return data;
+  }catch{ return {dias:0, ultimo:''}; }
+}
+function saveRacha(data){ try{localStorage.setItem(RACHA_KEY, JSON.stringify(data));}catch{} }
+
+function checkRacha(){
+  const racha = getRacha();
+  const hoy = today();
+  if(racha.ultimo === hoy) return racha.dias; // already counted today
+  
+  let diasSinUsar = 0;
+  if(racha.ultimo){
+    const diff = new Date(hoy+'T12:00:00') - new Date(racha.ultimo+'T12:00:00');
+    diasSinUsar = diff / (1000*60*60*24);
+  }
+  
+  if(diasSinUsar > 1.5){
+    // racha cortada
+    racha.dias = 1;
+  } else {
+    racha.dias = (racha.dias || 0) + 1;
+  }
+  racha.ultimo = hoy;
+  saveRacha(racha);
+  
+  // Bonus 7 dias seguidos
+  if(racha.dias > 0 && racha.dias % 7 === 0){
+    setXP(getXP() + 10);
+    showToast('🔥 7 días seguidos! +10 XP');
+  }
+  
+  return racha.dias;
+}
+
+// Penalizacion 7 dias sin usar
+function checkPenalizacion(){
+  const racha = getRacha();
+  if(!racha.ultimo) return;
+  const hoy = today();
+  const diff = (new Date(hoy+'T12:00:00') - new Date(racha.ultimo+'T12:00:00')) / (1000*60*60*24);
+  if(diff >= 7){
+    const lastPen = localStorage.getItem('franos-last-pen');
+    if(lastPen !== hoy){
+      localStorage.setItem('franos-last-pen', hoy);
+      setXP(Math.max(0, getXP() - 50));
+      showToast('−50 XP por inactividad');
+    }
+  }
+}
+
+// Session timer - 1 minute
+
+
+
 function init(){
   updateTime();setInterval(updateTime,30000);
   autoTheme();
+  iniciarTimerSesion();
   document.getElementById('frase-text').textContent=FRASES[fi];
   registrarSesion();
   iniciarTimerSesion();
@@ -916,9 +1005,17 @@ async function saveTop3(idx,texto,id){
   if(!texto.trim())return;
   try{if(id&&id!=='')await sb('prioridades','PATCH',{texto},`?id=eq.${id}`);else{await sb('prioridades','POST',{texto,fecha:today(),orden:idx+1,completada:false});loadHome();}}catch(e){console.warn(e.message);}
 }
+async function checkTop3Complete(){
+  try{
+    const prios = await sb('prioridades','GET',null,`?fecha=eq.${today()}&completada=eq.true&select=id`);
+    if(prios.length >= 3) earnXP('inicio-prioridades', 1, 1);
+  }catch{}
+}
+
 async function toggleTop3(idx,id,done){
   if(!id||id==='')return;
-  try{await sb('prioridades','PATCH',{completada:!done},`?id=eq.${id}`);document.querySelector(`#tr${idx} .top3-check`)?.classList.toggle('done');}catch{}
+  try{await sb('prioridades','PATCH',{completada:!done},`?id=eq.${id}`);
+    if(!done) checkTop3Complete();document.querySelector(`#tr${idx} .top3-check`)?.classList.toggle('done');}catch{}
 }
 
 // ── HÁBITOS ──
@@ -1152,7 +1249,8 @@ async function loadProyectos(){
     }).join('');
   }catch(e){document.getElementById('proyectos-list').innerHTML=`<div class="empty"><div class="et">Sin proyectos aún</div></div>`;console.warn('proyectos:',e.message);}
 }
-async function toggleSub(id,done){try{await sb('subtareas','PATCH',{completada:!done},`?id=eq.${id}`);loadProyectos();}catch{}}
+async function toggleSub(id,done){try{await sb('subtareas','PATCH',{completada:!done},`?id=eq.${id}`);loadProyectos();
+    if(!done) earnXP('proyectos-subtarea',1,999);}catch{}}
 async function delSub(id){try{await sb('subtareas','DELETE',null,`?id=eq.${id}`);loadProyectos();}catch{}}
 async function delProyecto(id){if(!confirm('¿Eliminar?'))return;try{await sb('proyectos','DELETE',null,`?id=eq.${id}`);loadProyectos();}catch{}}
 
@@ -1178,7 +1276,8 @@ async function loadDiario(){
 }
 async function saveDiarioHoy(){
   const texto=document.getElementById('diario-hoy-text')?.value||'';
-  try{const ex=await sb('diario','GET',null,`?fecha=eq.${today()}`);if(ex.length)await sb('diario','PATCH',{texto},`?fecha=eq.${today()}`);else await sb('diario','POST',{fecha:today(),texto,logros:[]});}catch{}
+  try{const ex=await sb('diario','GET',null,`?fecha=eq.${today()}`);if(ex.length)await sb('diario','PATCH',{texto},`?fecha=eq.${today()}`);else await sb('diario','POST',{fecha:today(),texto,logros:[]});
+    if(texto.length>10) earnXP('diario-entrada',1,1);}catch{}
 }
 async function syncLogros(){
   const chips=[...document.querySelectorAll('#logros-hoy .logro-chip')].map(c=>c.textContent.trim());
@@ -1200,7 +1299,8 @@ async function loadRevision(){
 async function saveRevision(){
   const ws=weekStart();
   const data={semana:ws,q1:document.getElementById('rev-q1')?.value||'',q2:document.getElementById('rev-q2')?.value||'',q3:document.getElementById('rev-q3')?.value||'',q4:document.getElementById('rev-q4')?.value||''};
-  try{const ex=await sb('revision_semanal','GET',null,`?semana=eq.${ws}`);if(ex.length)await sb('revision_semanal','PATCH',data,`?semana=eq.${ws}`);else await sb('revision_semanal','POST',data);}catch(e){console.warn('saveRevision:',e.message);}
+  try{const ex=await sb('revision_semanal','GET',null,`?semana=eq.${ws}`);if(ex.length)await sb('revision_semanal','PATCH',data,`?semana=eq.${ws}`);else await sb('revision_semanal','POST',data);if(nowAR().getDay()===0){earnXP('diario-semana-1',1,1);earnXP('diario-semana-2',1,1);earnXP('diario-semana-3',1,1);}
+  }catch(e){console.warn('saveRevision:',e.message);}
 }
 
 // ── STATS ──
@@ -1470,10 +1570,14 @@ function closeModal(){
 function selTag(el){document.querySelectorAll('.modal-tag').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');}
 function selFinTipo(tipo){finTipo=tipo;['gasto','ingreso'].forEach(t=>{document.getElementById(`ftipo-${t}`)?.classList.toggle('selected',t===tipo);});}
 
-async function guardarNota(){const texto=document.getElementById('m-texto')?.value.trim();if(!texto){showToast('Escribí algo');return;}const catMap={'💡 Idea':'idea','🔍 Investigar':'investigar','📚 Aprender':'aprender','✅ Tarea':'tarea','📝 Nota':'nota'};const tag=document.querySelector('.modal-tag.selected');const categoria=catMap[tag?.textContent.trim()]||'idea';try{await sb('notas','POST',{texto,categoria});closeModal();showToast('💡 Guardado');loadNotas(cFilter);}catch{showToast('Error');}}
+async function guardarNota(){const texto=document.getElementById('m-texto')?.value.trim();if(!texto){showToast('Escribí algo');return;}const catMap={'💡 Idea':'idea','🔍 Investigar':'investigar','📚 Aprender':'aprender','✅ Tarea':'tarea','📝 Nota':'nota'};const tag=document.querySelector('.modal-tag.selected');const categoria=catMap[tag?.textContent.trim()]||'idea';try{await sb('notas','POST',{texto,categoria});closeModal();showToast('💡 Guardado');loadNotas(cFilter);
+    earnXP('notas-crear',1,1);
+    const nl=getTodayLog();nl['notas-count']=(nl['notas-count']||0)+1;if(nl['notas-count']>=10)earnXP('notas-10',1,1);saveTodayLog(nl);}catch{showToast('Error');}}
 async function guardarHabito(){const nombre=document.getElementById('m-hnom')?.value.trim();if(!nombre){showToast('Poné un nombre');return;}const icono=document.getElementById('m-hicon')?.value.trim()||'⭐';const objetivo=document.getElementById('m-hobj')?.value.trim()||'Diario';try{await sb('habitos','POST',{nombre,icono,objetivo,streak:0});closeModal();showToast('Hábito agregado ✓');loadHabitos();}catch{showToast('Error');}}
-async function guardarEvento(){const titulo=document.getElementById('m-etit')?.value.trim();const fecha=document.getElementById('m-efecha')?.value;const hora=document.getElementById('m-ehora')?.value;const color=document.getElementById('m-ecolor')?.value;if(!titulo||!fecha){showToast('Título y fecha requeridos');return;}try{await sb('eventos','POST',{titulo,fecha,hora:hora||null,color});closeModal();showToast('Evento agregado ✓');loadAgenda();loadHome();}catch{showToast('Error');}}
-async function guardarFinanza(){const desc=document.getElementById('m-fdesc')?.value.trim();const monto=parseFloat(document.getElementById('m-fmonto')?.value);const icono=document.getElementById('m-ficon')?.value.trim()||'💰';const fecha=document.getElementById('m-ffecha')?.value||today();if(!desc||!monto){showToast('Completá los campos');return;}try{await sb('finanzas','POST',{descripcion:desc,monto,tipo:finTipo,icono,fecha});closeModal();showToast('Guardado ✓');loadFinanzas();}catch{showToast('Error');}}
+async function guardarEvento(){const titulo=document.getElementById('m-etit')?.value.trim();const fecha=document.getElementById('m-efecha')?.value;const hora=document.getElementById('m-ehora')?.value;const color=document.getElementById('m-ecolor')?.value;if(!titulo||!fecha){showToast('Título y fecha requeridos');return;}try{await sb('eventos','POST',{titulo,fecha,hora:hora||null,color});closeModal();showToast('Evento agregado ✓');loadAgenda();loadHome();
+    earnXP('agenda-evento',1,1);}catch{showToast('Error');}}
+async function guardarFinanza(){const desc=document.getElementById('m-fdesc')?.value.trim();const monto=parseFloat(document.getElementById('m-fmonto')?.value);const icono=document.getElementById('m-ficon')?.value.trim()||'💰';const fecha=document.getElementById('m-ffecha')?.value||today();if(!desc||!monto){showToast('Completá los campos');return;}try{await sb('finanzas','POST',{descripcion:desc,monto,tipo:finTipo,icono,fecha});closeModal();showToast('Guardado ✓');loadFinanzas();
+    earnXP('agenda-finanza',1,1);}catch{showToast('Error');}}
 async function guardarMeta(){const nombre=document.getElementById('m-mnom')?.value.trim();const objetivo=parseFloat(document.getElementById('m-mobj')?.value);const icono=document.getElementById('m-micon')?.value.trim()||'🎯';if(!nombre||!objetivo){showToast('Completá los campos');return;}try{await sb('metas','POST',{nombre,objetivo,actual:0,icono});closeModal();showToast('Meta creada ✓');loadMetas();}catch{showToast('Error');}}
 async function guardarAbono(metaId){const monto=parseFloat(document.getElementById('m-abono')?.value);if(!monto){showToast('Ingresá un monto');return;}try{const meta=await sb('metas','GET',null,`?id=eq.${metaId}`);await sb('metas','PATCH',{actual:Number(meta[0].actual)+monto},`?id=eq.${metaId}`);closeModal();showToast(`+${fmtMoney(monto)} abonado ✓`);loadMetas();}catch{showToast('Error');}}
 async function guardarLogro(){const logro=document.getElementById('m-logro')?.value.trim();if(!logro){showToast('Escribí un logro');return;}closeModal();const chip=document.createElement('div');chip.className='logro-chip';chip.textContent=logro;chip.onclick=()=>{chip.remove();syncLogros();};document.getElementById('logros-hoy')?.appendChild(chip);syncLogros();showToast('Logro agregado ✓');}
@@ -1499,7 +1603,9 @@ async function guardarProgLibro(id,total){
   const pagina=parseInt(document.getElementById('m-bprog')?.value);
   if(!pagina){showToast('Ingresá la página');return;}
   const estado=pagina>=parseInt(total)?'leido':'leyendo';
-  try{await sb('libros','PATCH',{pagina_actual:pagina,estado},`?id=eq.${id}`);closeModal();showToast(`Página ${pagina} guardada ✓`);loadLibros(lFilter);}catch{showToast('Error');}
+  try{await sb('libros','PATCH',{pagina_actual:pagina,estado},`?id=eq.${id}`);closeModal();showToast(`Página ${pagina} guardada ✓`);loadLibros(lFilter);
+    earnXP('play-progreso',1,1);
+    if(pagina>=parseInt(total)) earnXP('play-libro-completo',2,999);}catch{showToast('Error');}
 }
 async function delLibro(id){try{await sb('libros','DELETE',null,`?id=eq.${id}`);loadLibros(lFilter);showToast('Libro eliminado');}catch{}}
 async function editarSerie(id){
@@ -1530,7 +1636,8 @@ async function guardarProgSerie(id,total){
   try{await sb('series','PATCH',{episodio_actual:ep,estado},`?id=eq.${id}`);closeModal();showToast(`Episodio ${ep} guardado ✓`);loadSeries(sFilter);}catch{showToast('Error');}
 }
 async function delSerie(id){try{await sb('series','DELETE',null,`?id=eq.${id}`);loadSeries(sFilter);showToast('Eliminado');}catch{}}
-async function guardarProyecto(){const nombre=document.getElementById('m-pnom')?.value.trim();const icono=document.getElementById('m-picon')?.value.trim()||'🚀';const descripcion=document.getElementById('m-pdesc')?.value.trim()||'';if(!nombre){showToast('Poné un nombre');return;}try{await sb('proyectos','POST',{nombre,icono,descripcion});closeModal();showToast('Proyecto creado ✓');loadProyectos();}catch{showToast('Error guardando proyecto');}}
+async function guardarProyecto(){const nombre=document.getElementById('m-pnom')?.value.trim();const icono=document.getElementById('m-picon')?.value.trim()||'🚀';const descripcion=document.getElementById('m-pdesc')?.value.trim()||'';if(!nombre){showToast('Poné un nombre');return;}try{await sb('proyectos','POST',{nombre,icono,descripcion});closeModal();showToast('Proyecto creado ✓');loadProyectos();
+    earnXP('proyectos-nuevo',1,999);}catch{showToast('Error guardando proyecto');}}
 async function guardarSubtarea(proyectoId){const texto=document.getElementById('m-stexto')?.value.trim();if(!texto){showToast('Escribí la tarea');return;}try{await sb('subtareas','POST',{proyecto_id:proyectoId,texto,completada:false});closeModal();showToast('Tarea agregada ✓');loadProyectos();}catch{showToast('Error');}}
 
 
@@ -2391,6 +2498,8 @@ async function addAgua(ml){
     }
     loadNutricionTab();
     showToast(`+${ml}ml 💧`);
+    const existing2=await sb('nutricion','GET',null,`?fecha=eq.${today()}`);
+    if(existing2.length && (existing2[0].agua_ml||0)>=2000) earnXP('yo-agua',1,1);
   }catch(e){showToast('Error');}
 }
 
@@ -2561,6 +2670,7 @@ async function guardarEntreno(){
   try{
     await sb('entrenamientos','POST',{tipo,duracion,intensidad,fecha,notas});
     closeModal();showToast('Sesión registrada ✓');loadEntrenoTab();
+    earnXP('yo-entreno',1,1);
   }catch{showToast('Error');}
 }
 
@@ -2581,6 +2691,8 @@ async function guardarComida(){
       await sb('nutricion','POST',{fecha:today(),comidas:[comida],agua_ml:0});
     }
     closeModal();showToast('Comida agregada ✓');loadNutricionTab();
+    const cl=getTodayLog();cl['comidas-count']=(cl['comidas-count']||0)+1;saveTodayLog(cl);
+    if(cl['comidas-count']>=4) earnXP('yo-comidas',1,1);
   }catch{showToast('Error');}
 }
 
@@ -2616,6 +2728,8 @@ async function guardarSueno(){
     if(existing.length) await sb('sueno','PATCH',data,`?fecha=eq.${today()}`);
     else await sb('sueno','POST',{...data,fecha:today()});
     closeModal();showToast('Sueño registrado ✓');loadSaludTab();
+    const sl=getTodayLog();sl['sueno-count']=(sl['sueno-count']||0)+1;saveTodayLog(sl);
+    if(sl['sueno-count']%3===0) earnXP('yo-sueno',1,999);
   }catch{showToast('Error');}
 }
 
@@ -2629,6 +2743,7 @@ async function guardarTurno(){
   try{
     await sb('turnos_medicos','POST',{especialidad,medico,fecha,hora,nota,completado:false});
     closeModal();showToast('Turno agendado ✓');loadSaludTab();
+    earnXP('yo-turno',1,999);
   }catch{showToast('Error');}
 }
 

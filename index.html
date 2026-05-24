@@ -1081,7 +1081,7 @@ async function delFin(id){try{await sb('finanzas','DELETE',null,`?id=eq.${id}`);
 async function loadLibros(filter='all'){
   lFilter=filter;
   try{
-    const q=filter==='all'?'?order=created_at.desc':`?estado=eq.${filter}&order=created_at.desc`;
+    const q=filter==='all'?'?order=orden.asc,created_at.desc':`?estado=eq.${filter}&order=orden.asc,created_at.desc`;
     const libros=await sb('libros','GET',null,q);
     const el=document.getElementById('libros-grid');
     if(!libros.length){el.innerHTML=`<div style="grid-column:1/-1" class="empty"><div class="ei">📚</div><div class="et">Agregá tu primer libro</div></div>`;return;}
@@ -1107,7 +1107,7 @@ function filterLibros(f,el){document.querySelectorAll('#screen-libros .nota-tag'
 async function loadSeries(filter='all'){
   sFilter=filter;
   try{
-    const q=filter==='all'?'?order=created_at.desc':`?estado=eq.${filter}&order=created_at.desc`;
+    const q=filter==='all'?'?order=orden.asc,created_at.desc':`?estado=eq.${filter}&order=orden.asc,created_at.desc`;
     const series=await sb('series','GET',null,q);
     const el=document.getElementById('series-grid');
     if(!series.length){el.innerHTML=`<div style="grid-column:1/-1" class="empty"><div class="ei">🎬</div><div class="et">Agregá tu primera serie o peli</div></div>`;return;}

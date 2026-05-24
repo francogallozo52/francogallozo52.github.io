@@ -920,6 +920,7 @@ function loadApp(){
   registrarSesion();
   updateXPDisplay();
   initNotifications();
+  updateTime();
   loadHome();
   loadHabitos();
   loadNotas();
@@ -1097,8 +1098,10 @@ function updateTime(){
   document.getElementById('home-time').textContent=`${h}:${String(m).padStart(2,'0')}`;
   document.getElementById('home-date').textContent=`${days[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth()].toLowerCase()}`;
   const userId=currentUser?.id;
-  const nombre=(userId?localStorage.getItem(`franos-nombre-${userId}`):null)||currentUser?.user_metadata?.full_name||currentUser?.email?.split('@')[0]||'Fran';
-  document.getElementById('home-greeting').innerHTML=`${h<13?'Buen día':h<20?'Buenas tardes':'Buenas noches'}, <em>${nombre}.</em>`;
+  const nombreGuardado=userId?localStorage.getItem('franos-nombre-'+userId):null;
+  const nombre=nombreGuardado||currentUser?.user_metadata?.full_name||currentUser?.email?.split('@')[0]||'Fran';
+  const greetingEl=document.getElementById('home-greeting');
+  if(greetingEl) greetingEl.innerHTML=`${h<13?'Buen día':h<20?'Buenas tardes':'Buenas noches'}, <em>${nombre}.</em>`;
 }
 function autoTheme(){
   let t;

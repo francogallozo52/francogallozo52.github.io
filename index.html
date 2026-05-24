@@ -351,6 +351,17 @@ input.top3-text:focus{
     </div>
   </div>
 
+  <!-- NOMBRE SCREEN -->
+  <div id="nombre-screen" style="position:fixed;inset:0;background:var(--bg);z-index:8999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;">
+    <div style="width:100%;max-width:360px;text-align:center">
+      <div style="font-size:48px;margin-bottom:20px">👋</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:8px">¡Bienvenido!</div>
+      <div style="font-size:15px;color:var(--text3);margin-bottom:32px">¿Cómo querés que te llamemos?</div>
+      <input id="nombre-input" class="modal-input" type="text" placeholder="Tu nombre..." style="text-align:center;font-size:18px;margin-bottom:16px" onkeydown="if(event.key==='Enter')guardarNombre()">
+      <button class="btn-primary" onclick="guardarNombre()">Empezar →</button>
+    </div>
+  </div>
+
   <!-- LOGIN SCREEN -->
   <div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;">
     <div style="width:100%;max-width:360px">
@@ -977,7 +988,14 @@ function showLogin(){
 
 function showApp(){
   document.getElementById('login-screen').style.display = 'none';
-  loadApp();
+  // Check if user has a name saved
+  const userId = currentUser?.id;
+  const nombre = userId ? localStorage.getItem(`franos-nombre-${userId}`) : null;
+  if(!nombre){
+    document.getElementById('nombre-screen').style.display = 'flex';
+  } else {
+    loadApp();
+  }
 }
 
 async function doLogin(){
@@ -1054,6 +1072,17 @@ function doGoogleLogin(){
   window.location.href = `${SB}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
 }
 
+function guardarNombre(){
+  const nombre = document.getElementById('nombre-input').value.trim();
+  if(!nombre){ return; }
+  try{
+    const userId = currentUser?.id;
+    if(userId) localStorage.setItem(`franos-nombre-${userId}`, nombre);
+  }catch{}
+  document.getElementById('nombre-screen').style.display = 'none';
+  loadApp();
+}
+
 function doLogout(){
   if(!confirm('¿Cerrar sesión?')) return;
   localStorage.removeItem('franos-session');
@@ -1067,7 +1096,8 @@ function updateTime(){
   const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   document.getElementById('home-time').textContent=`${h}:${String(m).padStart(2,'0')}`;
   document.getElementById('home-date').textContent=`${days[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth()].toLowerCase()}`;
-  const nombre=currentUser?.user_metadata?.nombre||currentUser?.email?.split('@')[0]||'Fran';
+  const userId=currentUser?.id;
+  const nombre=(userId?localStorage.getItem(`franos-nombre-${userId}`):null)||currentUser?.user_metadata?.full_name||currentUser?.email?.split('@')[0]||'Fran';
   document.getElementById('home-greeting').innerHTML=`${h<13?'Buen día':h<20?'Buenas tardes':'Buenas noches'}, <em>${nombre}.</em>`;
 }
 function autoTheme(){

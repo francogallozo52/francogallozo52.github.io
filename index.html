@@ -1620,7 +1620,7 @@ async function guardarLibro(){
     const gbItems=gbData.items||[];
     const gbCover=gbItems.find(i=>i.volumeInfo?.imageLinks?.thumbnail)?.volumeInfo?.imageLinks?.thumbnail;
     if(gbCover){
-      cover_url=gbCover.replace('http://','https://').replace('zoom=1','zoom=2');
+      cover_url=gbCover.replace('http://','https://').replace('zoom=1','zoom=0').replace('&edge=curl','');
     } else {
       // Fallback to Open Library
       const olRes=await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(titulo)}&limit=1`);

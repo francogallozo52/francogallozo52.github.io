@@ -1613,7 +1613,20 @@ async function guardarLibro(){
   const pagina_actual=parseInt(document.getElementById('m-bpag')?.value)||0;
   if(!titulo){showToast('Poné el título');return;}
   let cover_url='';
-  try{const r=await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(titulo)}&limit=1`);const data=await r.json();if(data.docs?.[0]?.cover_i)cover_url=`https://covers.openlibrary.org/b/id/${data.docs[0].cover_i}-M.jpg`;}catch{}
+  try{
+    // Try Google Books first
+    const gbRes=await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(titulo)}+inauthor:${encodeURIComponent(autor||'')}&maxResults=1&langRestrict=es`);
+    const gbData=await gbRes.json();
+    const gbCover=gbData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+    if(gbCover){
+      cover_url=gbCover.replace('http://','https://').replace('zoom=1','zoom=2');
+    } else {
+      // Fallback to Open Library
+      const olRes=await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(titulo)}&limit=1`);
+      const olData=await olRes.json();
+      if(olData.docs?.[0]?.cover_i) cover_url=`https://covers.openlibrary.org/b/id/${olData.docs[0].cover_i}-M.jpg`;
+    }
+  }catch{}
   try{await sb('libros','POST',{titulo,autor,estado,cover_url,paginas_total,pagina_actual});closeModal();showToast('Libro agregado ✓');loadLibros(lFilter);}catch{showToast('Error guardando libro');}
 }
 async function editarLibro(id){

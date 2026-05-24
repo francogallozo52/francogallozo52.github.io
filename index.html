@@ -1363,13 +1363,39 @@ async function loadStats(){
     }).join('');
 
     // XP and level (based on total habit logs)
-    const totalLogs = habLogs.length;
-    const xp = totalLogs*10, nivel=Math.min(Math.floor(xp/500)+1,5), xpN=xp%500;
+    const xp = getXP();
+    const THRESH=[0,0,500,1000,1500,2000];
+    let nivel=1; for(let i=2;i<=5;i++){if(xp>=THRESH[i])nivel=i;}
+    const xpEnNivel=xp-THRESH[nivel];
+    const xpParaSig=nivel<5?(THRESH[nivel+1]-THRESH[nivel]):500;
+    const xpMostrar=nivel<5?xpEnNivel:(xp-2000)%500;
+    const pct=Math.min(100,Math.round((xpMostrar/xpParaSig)*100));
     document.getElementById('stats-nivel').textContent=`⚡ Nivel ${nivel} — ${NIVEL_NOMBRES[nivel]}`;
-    document.getElementById('stats-xp').textContent=`${xpN} / 500 XP`;
-    document.getElementById('stats-xp-bar').style.width=`${Math.round((xpN/500)*100)}%`;
+    document.getElementById('stats-xp').textContent=`${xpMostrar} / ${xpParaSig} XP`;
+    document.getElementById('stats-xp-bar').style.width=`${pct}%`;
     const desc=document.getElementById('stats-nivel-desc');
-    if(desc)desc.innerHTML=`${NIVEL_DESCS[nivel]||''}<br><br><span style="color:var(--text3);font-size:12px">💡 Ganás <strong style="color:var(--accent3)">10 XP</strong> por cada hábito que tildás. Cada <strong style="color:var(--accent3)">500 XP</strong> subís de nivel. Llevás <strong style="color:var(--accent3)">${totalLogs} hábitos</strong> completados en total.</span>`;
+    if(desc){
+    const tips = [
+      '💡 Cumplí las 3 prioridades del día → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '✅ Tildá todos tus hábitos del día → <strong style="color:var(--accent3)">+5 XP</strong>',
+      '💪 Registrá una sesión de entreno → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '📝 Creá una nota → <strong style="color:var(--accent3)">+1 XP</strong>. Llegá a 10 notas en el día → <strong style="color:var(--accent3)">+1 XP</strong> extra',
+      '📅 Registrá un evento en la agenda → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '💰 Registrá un ingreso o gasto → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '📖 Actualizá el progreso de un libro → <strong style="color:var(--accent3)">+1 XP</strong>. Completarlo → <strong style="color:var(--accent3)">+2 XP</strong>',
+      '🚀 Completá una subtarea de un proyecto → <strong style="color:var(--accent3)">+1 XP</strong> por cada una',
+      '📓 Escribí en el diario → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '🔄 Completá la revisión semanal el domingo → <strong style="color:var(--accent3)">+3 XP</strong>',
+      '💧 Tomá 2 litros de agua en el día → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '🍽️ Registrá 4 comidas en el día → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '😴 Cada 3 sueños registrados → <strong style="color:var(--accent3)">+1 XP</strong>',
+      '🔥 7 días seguidos usando la app → <strong style="color:var(--accent3)">+10 XP</strong> bonus',
+      '⚠️ 7 días sin abrir la app → <strong style="color:var(--red)">−50 XP</strong>. ¡No te olvides!',
+    ];
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+    desc.style.display='block';
+    desc.innerHTML=`${NIVEL_DESCS[nivel]||''}<br><br><span style="color:var(--text3);font-size:12px">💡 ${tip}</span>`;
+    }
   }catch(e){console.warn('stats:',e.message);}
 }
 

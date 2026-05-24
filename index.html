@@ -227,8 +227,8 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 .book-cover,.serie-cover{width:100%;height:140px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;overflow:hidden}
 .book-cover img,.serie-cover img{width:100%;height:100%;object-fit:cover}
 .book-info,.serie-info{padding:10px 12px}
-.book-title,.serie-title{font-size:13px;font-weight:500;line-height:1.3;margin-bottom:4px;color:var(--text)}
-.book-author,.serie-meta{font-size:11px;color:var(--text3)}
+.book-title,.serie-title{font-size:14px;font-weight:600;line-height:1.3;margin-bottom:3px;color:var(--text)}
+.book-author,.serie-meta{font-size:11px;color:var(--text3);margin-bottom:6px}
 .book-prog,.serie-prog{height:3px;background:var(--bg4);border-radius:2px;margin-top:6px}
 .book-prog-fill,.serie-prog-fill{height:100%;background:var(--accent3);border-radius:2px}
 
@@ -328,6 +328,15 @@ input.top3-text:focus{
 .book-progress-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:4px;}
 .book-progress-fill{height:100%;background:var(--accent3);border-radius:3px;transition:width .4s;}
 .book-progress-text{font-size:10px;color:var(--text3);}
+
+.book-status{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.5px;padding:2px 8px;border-radius:20px;margin-bottom:6px}
+.book-status.leyendo{background:rgba(90,173,143,.15);color:var(--accent3)}
+.book-status.leido{background:rgba(90,173,143,.25);color:var(--accent3)}
+.book-status.pendiente{background:var(--bg3);color:var(--text3)}
+.book-progress{padding:0 10px 10px}
+.book-progress-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-bottom:4px}
+.book-progress-fill{height:100%;background:var(--accent3);border-radius:2px;transition:width .4s}
+.book-progress-text{font-size:10px;color:var(--text3);font-weight:500}
 </style>
 </head>
 <body>
@@ -1086,8 +1095,8 @@ async function loadLibros(filter='all'){
         <div class="book-cover-ph" style="display:${b.cover_url?'none':'flex'}">📖</div>
         <div class="book-title">${b.titulo}</div>
         <div class="book-author">${b.autor||''}</div>
-        <span class="book-status ${b.estado||'pendiente'}">${b.estado==='leyendo'?'Leyendo':b.estado==='leido'?'Leído':'Pendiente'}</span>
-        ${b.paginas_total>0?`<div class="book-progress"><div class="book-progress-bar"><div class="book-progress-fill" style="width:${pct}%"></div></div><div class="book-progress-text">${b.pagina_actual||0} / ${b.paginas_total} · ${pct}%</div></div>`:''}
+        <span class="book-status ${b.estado||'pendiente'}">${b.estado==='leyendo'?'📖 Leyendo':b.estado==='leido'?'✅ Leído':'⏳ Pendiente'}</span>
+        ${b.paginas_total>0?`<div class="book-progress"><div class="book-progress-bar"><div class="book-progress-fill" style="width:${pct}%"></div></div><div class="book-progress-text">${b.pagina_actual||0} de ${b.paginas_total} págs · ${pct}%</div></div>`:''}
       </div>`;
     }).join('');
   }catch(e){document.getElementById('libros-grid').innerHTML=`<div style="grid-column:1/-1" class="empty"><div class="et">Sin libros aún</div></div>`;console.warn('libros:',e.message);}

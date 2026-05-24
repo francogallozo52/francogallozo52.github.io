@@ -323,6 +323,11 @@ input.top3-text:focus{
 .nota-card-tag{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
 .nota-card-text{font-size:16px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:8px;}
 .nota-card-date{font-size:11px;color:var(--text3);}
+
+.book-progress{padding:0 10px 10px;}
+.book-progress-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:4px;}
+.book-progress-fill{height:100%;background:var(--accent3);border-radius:3px;transition:width .4s;}
+.book-progress-text{font-size:10px;color:var(--text3);}
 </style>
 </head>
 <body>
@@ -1995,7 +2000,10 @@ function closeCtx(){
 }
 
 function showCtxLibro(x, y, id, editData){
+  const parts = editData.split('|');
+  const total = parts[4] || 0;
   showCtx(x, y,[
+    {icon:'📖', label:'Actualizar progreso', action:`openModal('libro-progreso','${id}|${total}')`},
     {icon:'✏️', label:'Editar', action:`openModal('libro-editar','${editData}')`},
     {icon:'✕', label:'Eliminar', cls:'danger', action:`delLibro('${id}')`},
   ]);

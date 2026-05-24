@@ -743,7 +743,13 @@ async function sb(table,method='GET',body=null,query=''){
   try{
     const token = authToken || KEY;
     const opts={method,signal:ctrl.signal,headers:{'apikey':KEY,'Authorization':'Bearer '+token,'Content-Type':'application/json','Prefer':method==='POST'?'return=representation':method==='PATCH'?'return=representation':''}};
-    if(body)opts.body=JSON.stringify(body);
+    if(body){
+      // Auto-inject user_id on POST requests
+      if(method==='POST' && currentUser?.id && !body.user_id){
+        body = {...body, user_id: currentUser.id};
+      }
+      opts.body=JSON.stringify(body);
+    }
     const res=await fetch(`${SB}/rest/v1/${table}${query}`,opts);
     clearTimeout(timer);
     if(!res.ok)throw new Error(await res.text());

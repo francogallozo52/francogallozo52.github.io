@@ -68,12 +68,7 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 .screen.active{visibility:visible;opacity:1}
 
 /* Nav */
-.nav-wrap{
-  flex-shrink:0;
-  padding-bottom:env(safe-area-inset-bottom,20px);
-  background:var(--bg2);border-top:1px solid var(--border);
-  z-index:10;
-}
+.nav-wrap{flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg2);border-top:1px solid var(--border);z-index:10}
 .nav{display:flex;padding:6px 4px 0;}
 .nav-item{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -89,7 +84,7 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 /* FAB — completely outside #app, position:fixed */
 #fab-btn{
   position:fixed;
-  bottom:calc(72px + env(safe-area-inset-bottom,20px));
+  bottom:calc(64px + env(safe-area-inset-bottom,0px));
   right:20px;
   width:52px;height:52px;
   border-radius:50%;
@@ -132,7 +127,7 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 /* Toast — completely outside #app, position:fixed */
 #toast{
   position:fixed;
-  bottom:calc(80px + env(safe-area-inset-bottom,20px));
+  bottom:calc(72px + env(safe-area-inset-bottom,0px));
   left:50%;
   transform:translateX(-50%) translateY(10px);
   background:var(--bg3);border:1px solid var(--border);
@@ -247,12 +242,12 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 .sub-texto.done{text-decoration:line-through;color:var(--text3)}
 
 /* === DIARIO === */
-.diario-entrada{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
-.diario-fecha{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
-.diario-texto{font-size:15px;line-height:1.7;color:var(--text)}
+.diario-entrada{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px}
+.diario-fecha{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;color:var(--accent);letter-spacing:0;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.diario-texto{font-size:15px;line-height:1.8;color:var(--text2)}
 .diario-textarea{width:100%;min-height:200px;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);line-height:1.7;resize:none}
-.logro-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:13px;margin:4px 4px 0 0;touch-action:manipulation;cursor:pointer}
-.logros-wrap{display:flex;flex-wrap:wrap;margin-bottom:12px}
+.logro-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;margin:6px 6px 0 0;touch-action:manipulation;cursor:pointer}
+.logros-wrap{display:flex;flex-wrap:wrap;margin-bottom:16px;margin-top:4px}
 .revision-section{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
 .revision-q{font-size:14px;font-weight:500;margin-bottom:10px;color:var(--text)}
 .revision-textarea{width:100%;min-height:80px;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);line-height:1.6;resize:none}

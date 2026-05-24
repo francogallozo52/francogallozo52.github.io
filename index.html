@@ -1049,18 +1049,9 @@ async function doForgot(){
   }
 }
 
-async function doGoogleLogin(){
-  try{
-    const res = await fetch(`${SB}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.href)}`, {
-      headers: {'apikey': KEY}
-    });
-    // Redirect to Google OAuth
-    window.location.href = `${SB}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin + window.location.pathname)}`;
-  }catch(e){
-    const errEl = document.getElementById('login-error');
-    errEl.style.display = 'block';
-    errEl.textContent = 'Error al conectar con Google';
-  }
+function doGoogleLogin(){
+  const redirectTo = window.location.origin + window.location.pathname;
+  window.location.href = `${SB}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
 }
 
 function doLogout(){

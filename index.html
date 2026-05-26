@@ -236,7 +236,7 @@ input,textarea,select{font-family:'DM Sans',sans-serif;-webkit-appearance:none;-
 .proyecto-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:16px 18px;margin-bottom:12px}
 .proyecto-title{font-size:16px;font-weight:500;margin-bottom:10px;color:var(--text)}
 .subtarea-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
-.sub-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;transition:all .2s;background:transparent;touch-action:manipulation;cursor:pointer}
+.sub-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;transition:all .2s;background:transparent;touch-action:manipulation;cursor:pointer}
 .sub-check.done{background:var(--accent3);border-color:var(--accent3);color:#fff}
 .sub-texto{font-size:14px;color:var(--text)}
 .sub-texto.done{text-decoration:line-through;color:var(--text3)}
@@ -931,8 +931,6 @@ function selFinCat(el, cat){
   finCatActual = cat;
 }
 
-// Override selFinTipo to also toggle category containers
-const _origSelFinTipo = typeof selFinTipo === 'function' ? selFinTipo : null;
 function selFinTipo(tipo){
   finTipo = tipo;
   document.getElementById('ftipo-gasto')?.classList.toggle('selected', tipo==='gasto');
@@ -1974,7 +1972,6 @@ function closeModal(){
   if(overlay) overlay.classList.remove('open');
 }
 function selTag(el){document.querySelectorAll('.modal-tag').forEach(t=>t.classList.remove('selected'));el.classList.add('selected');}
-function selFinTipo(tipo){finTipo=tipo;['gasto','ingreso'].forEach(t=>{document.getElementById(`ftipo-${t}`)?.classList.toggle('selected',t===tipo);});}
 
 async function guardarNota(){const texto=document.getElementById('m-texto')?.value.trim();if(!texto){showToast('Escribí algo');return;}const catMap={'💡 Idea':'idea','🔍 Investigar':'investigar','📚 Aprender':'aprender','✅ Tarea':'tarea','📝 Nota':'nota'};const tag=document.querySelector('.modal-tag.selected');const categoria=catMap[tag?.textContent.trim()]||'idea';try{await sb('notas','POST',{texto,categoria});closeModal();showToast('💡 Guardado');loadNotas(cFilter);
     earnXP('notas-crear',1,1);
@@ -2854,7 +2851,7 @@ function sendLocalNotif(title, message, url){
 }
 
 // Check for event reminders
-async async function checkEventReminders(){
+async function checkEventReminders(){
   try{
     const now = nowAR();
     const todayEvents = await sb('eventos','GET',null,`?fecha=eq.${today()}&order=hora.asc`);

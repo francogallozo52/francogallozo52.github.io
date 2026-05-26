@@ -2854,7 +2854,7 @@ function sendLocalNotif(title, message, url){
 }
 
 // Check for event reminders
-async function checkEventReminders(){
+async async function checkEventReminders(){
   try{
     const now = nowAR();
     const todayEvents = await sb('eventos','GET',null,`?fecha=eq.${today()}&order=hora.asc`);
@@ -2864,21 +2864,32 @@ async function checkEventReminders(){
       const evMinutes = evH * 60 + evM;
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const diff = evMinutes - nowMinutes;
-
-      // Remind 2 hours before (120 min)
-      if(diff > 115 && diff < 125){
-        const key = `notif-ev-${ev.id}-${today()}`;
+      // 2 hours before
+      if(diff >= 110 && diff < 125){
+        const key = 'franos-ev-reminder-' + ev.id + '-' + today();
         if(!localStorage.getItem(key)){
           localStorage.setItem(key, '1');
           sendLocalNotif(
             `📅 En 2 horas: ${ev.titulo}`,
-            `Recordatorio: ${ev.titulo} a las ${ev.hora}`,
+            `Tu evento "${ev.titulo}" es a las ${ev.hora}. ¡No te olvides!`,
+            '/franos'
+          );
+        }
+      }
+      // 30 minutes before
+      if(diff >= 25 && diff < 35){
+        const key = 'franos-ev-reminder30-' + ev.id + '-' + today();
+        if(!localStorage.getItem(key)){
+          localStorage.setItem(key, '1');
+          sendLocalNotif(
+            `⏰ En 30 min: ${ev.titulo}`,
+            `Tu evento "${ev.titulo}" es a las ${ev.hora}. ¡Ya casi!`,
             '/franos'
           );
         }
       }
     }
-  }catch(e){}
+  }catch(e){console.warn('eventos:', e.message);}
 }
 
 

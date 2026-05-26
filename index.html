@@ -1067,10 +1067,15 @@ function showLogin(){
 
 function showApp(){
   document.getElementById('login-screen').style.display = 'none';
-  // Check if user has a name saved
   const userId = currentUser?.id;
-  const nombre = userId ? localStorage.getItem(`franos-nombre-${userId}`) : null;
+  const nombre = userId ? localStorage.getItem('franos-nombre-'+userId) : null;
   if(!nombre){
+    // New user - clear any leftover localStorage from previous users
+    localStorage.removeItem('franos-racha');
+    localStorage.removeItem('franos-xp');
+    localStorage.removeItem('franos-xp-log');
+    localStorage.removeItem('franos-sesiones-dias');
+    localStorage.removeItem('franos-last-pen');
     document.getElementById('nombre-screen').style.display = 'flex';
   } else {
     loadApp();

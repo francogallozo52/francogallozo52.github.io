@@ -2613,12 +2613,22 @@ function scheduleNotifications(){
   const userId = currentUser?.id;
   const nombre = (userId ? localStorage.getItem('franos-nombre-'+userId) : null) || 'vos';
 
-  // ── 10:00 Buenos días + prioridades ──
+  // ── 9:00 Prioridades del día ──
+  if(h === 9 && min < 15 && !localStorage.getItem('franos-notif-prios-'+dateStr)){
+    localStorage.setItem('franos-notif-prios-'+dateStr, '1');
+    sendLocalNotif(
+      '🎯 Buenos días, ' + nombre,
+      '¿Cuáles son tus 3 prioridades de hoy? Definirlas ahora cambia el día.',
+      '/franos'
+    );
+  }
+
+  // ── 10:00 Buenos días + hábitos ──
   if(h === 10 && min < 15 && !localStorage.getItem('franos-notif-morning-'+dateStr)){
     localStorage.setItem('franos-notif-morning-'+dateStr, '1');
     sendLocalNotif(
-      '☀️ Buenos días, ' + nombre,
-      '¿Cuáles son tus 3 prioridades de hoy? Abrí FranOS y arrancá.',
+      '☀️ ' + nombre + ', ¿arrancaste con tus hábitos?',
+      'Tildar el primero es lo más difícil. Después viene solo.',
       '/franos'
     );
   }
@@ -2670,19 +2680,27 @@ function scheduleNotifications(){
     }
   }
 
-  // ── Racha en peligro ──
+  // ── Racha en peligro - 2 días sin tildar hábitos ──
   try{
-    const racha = getRacha();
-    if(racha.ultimo && racha.ultimo !== dateStr){
-      const diff = (new Date(dateStr+'T12:00:00') - new Date(racha.ultimo+'T12:00:00')) / (1000*60*60*24);
-      if(diff >= 1 && diff < 1.5 && h >= 20 && !localStorage.getItem('franos-notif-racha-'+dateStr)){
-        localStorage.setItem('franos-notif-racha-'+dateStr, '1');
-        sendLocalNotif(
-          '🔥 ¡No pierdas la racha, ' + nombre + '!',
-          'Llevas ' + racha.dias + ' días seguidos. Abrí la app antes de medianoche.',
-          '/franos'
-        );
-      }
+    if(h >= 18 && !localStorage.getItem('franos-notif-racha-'+dateStr)){
+      const ayerStr = daysAgo(1);
+      const antesStr = daysAgo(2);
+      Promise.all([
+        sb('habitos_log','GET',null,'?fecha=eq.'+ayerStr+'&completado=eq.true&select=id'),
+        sb('habitos_log','GET',null,'?fecha=eq.'+antesStr+'&completado=eq.true&select=id'),
+        sb('habitos_log','GET',null,'?fecha=eq.'+dateStr+'&completado=eq.true&select=id')
+      ]).then(([ayerLogs, antesDeLogs, hoyLogs])=>{
+        const sinHabitos2Dias = ayerLogs.length === 0 && antesDeLogs.length === 0;
+        const sinHabitsHoy = hoyLogs.length === 0;
+        if(sinHabitos2Dias && sinHabitsHoy){
+          localStorage.setItem('franos-notif-racha-'+dateStr, '1');
+          sendLocalNotif(
+            '⚠️ ' + nombre + ', tu racha está en peligro',
+            'Llevas 2 días sin tildar ningún hábito. ¿Todo bien? Abrí FranOS.',
+            '/franos'
+          );
+        }
+      }).catch(()=>{});
     }
   }catch{}
 
@@ -2701,6 +2719,36 @@ function scheduleNotifications(){
           }
         });
       });
+    }
+  }catch{}
+
+  // ── Meta con fecha límite y poco ahorro ──
+  try{
+    const metaKey = 'franos-notif-meta-' + dateStr;
+    if(h === 10 && !localStorage.getItem(metaKey)){
+      sb('metas','GET',null,'?fecha_limite=not.is.null&order=created_at.asc').then(metas=>{
+        sb('finanzas','GET',null,'?created_at=gte.'+monthStart()+'T00:00:00').then(movs=>{
+          const ingresosMes = movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.monto),0);
+          const gastosMes = movs.filter(m=>m.tipo==='gasto').reduce((a,m)=>a+Number(m.monto),0);
+          const ahorroMes = Math.max(0, ingresosMes - gastosMes);
+          
+          for(const meta of metas){
+            const meses = mesesRestantes(meta.fecha_limite);
+            if(meses === null || meses <= 0) continue;
+            const restante = Math.max(0, meta.objetivo - meta.actual);
+            const necesitaMes = Math.ceil(restante / meses);
+            if(ahorroMes < necesitaMes * 0.5 && restante > 0){
+              localStorage.setItem(metaKey, '1');
+              sendLocalNotif(
+                '🎯 Meta en riesgo: ' + meta.nombre,
+                'Necesitás ahorrar $' + necesitaMes.toLocaleString('es-AR') + '/mes y este mes vas por $' + ahorroMes.toLocaleString('es-AR') + '.',
+                '/franos'
+              );
+              break;
+            }
+          }
+        }).catch(()=>{});
+      }).catch(()=>{});
     }
   }catch{}
 }

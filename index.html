@@ -347,7 +347,7 @@ input.top3-text:focus{
     <div class="topbar-logo">Fran<span>OS</span></div>
     <div class="topbar-right">
       <button class="icon-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
-      <button class="icon-btn">🔔</button>
+      <button class="icon-btn" onclick="openNotifPanel()" style="position:relative">🔔<span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:16px"></span></button>
     </div>
   </div>
 

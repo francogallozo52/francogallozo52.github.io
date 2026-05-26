@@ -3332,14 +3332,31 @@ async function initNotifications(){
     OneSignalDeferred.push(async function(OneSignal){
       const permission = await OneSignal.Notifications.permission;
       if(!permission){
-        // ask permission after 3 seconds
         setTimeout(async ()=>{
           await OneSignal.Notifications.requestPermission();
+          await savePlayerIdToSupabase(OneSignal);
         }, 3000);
+      } else {
+        await savePlayerIdToSupabase(OneSignal);
       }
       scheduleLocalNotifications();
     });
   }catch(e){console.warn('OneSignal:', e);}
+}
+
+async function savePlayerIdToSupabase(OneSignal){
+  try{
+    if(!currentUser?.id) return;
+    const playerId = await OneSignal.User.PushSubscription.id;
+    if(!playerId) return;
+    // Check if perfil exists
+    const existing = await sb('perfil','GET',null,'?user_id=eq.'+currentUser.id);
+    if(existing.length){
+      await sb('perfil','PATCH',{onesignal_player_id:playerId},'?user_id=eq.'+currentUser.id);
+    } else {
+      await sb('perfil','POST',{user_id:currentUser.id, onesignal_player_id:playerId});
+    }
+  }catch(e){console.warn('savePlayerId:', e);}
 }
 
 function scheduleLocalNotifications(){

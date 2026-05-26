@@ -615,6 +615,10 @@ input.top3-text:focus{
           </div>
           <div id="fin-list"></div>
         </div>
+        <div class="card fu fu4" id="fin-cats-card">
+          <div class="card-label">📊 Gastos por categoría</div>
+          <div id="fin-cats-chart"></div>
+        </div>
         <div class="card fu fu5">
           <div class="row-between" style="margin-bottom:14px">
             <div class="card-label" style="margin:0">🎯 Metas de ahorro</div>
@@ -916,6 +920,50 @@ function checkPenalizacion(){
 
 // Session timer - 1 minute
 
+
+
+// Fin categoria helpers
+let finCatActual = 'Comida';
+function selFinCat(el, cat){
+  const container = el.closest('.modal-tags');
+  container.querySelectorAll('.modal-tag').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  finCatActual = cat;
+}
+
+// Override selFinTipo to also toggle category containers
+const _origSelFinTipo = typeof selFinTipo === 'function' ? selFinTipo : null;
+function selFinTipo(tipo){
+  finTipo = tipo;
+  document.getElementById('ftipo-gasto')?.classList.toggle('selected', tipo==='gasto');
+  document.getElementById('ftipo-ingreso')?.classList.toggle('selected', tipo==='ingreso');
+  const gastoEl = document.getElementById('fin-cats-gasto');
+  const ingresoEl = document.getElementById('fin-cats-ingreso');
+  if(gastoEl) gastoEl.style.display = tipo==='gasto' ? 'flex' : 'none';
+  if(ingresoEl) ingresoEl.style.display = tipo==='ingreso' ? 'flex' : 'none';
+  // Reset category
+  finCatActual = tipo==='gasto' ? 'Comida' : 'Sueldo';
+  const active = tipo==='gasto' ? gastoEl : ingresoEl;
+  if(active){
+    active.querySelectorAll('.modal-tag').forEach((b,i)=>b.classList.toggle('selected',i===0));
+  }
+}
+
+// Category icons map
+const CAT_ICONS = {
+  'Comida':'🍔','Transporte':'🚌','Ocio':'🎉','Ropa':'👕',
+  'Tecnología':'💻','Deudas':'💳','Salud':'🏥','Otros':'📦',
+  'Sueldo':'💼','Freelance':'🖥️'
+};
+
+// Meses restantes helper
+function mesesRestantes(fechaLimite){
+  if(!fechaLimite) return null;
+  const hoy = new Date();
+  const limite = new Date(fechaLimite + 'T12:00:00');
+  const meses = (limite.getFullYear()-hoy.getFullYear())*12 + (limite.getMonth()-hoy.getMonth());
+  return Math.max(0, meses);
+}
 
 
 function init(){
@@ -1383,7 +1431,35 @@ async function loadFinanzas(){
     document.getElementById('fin-gastos').textContent=fmtMoney(gas);
     document.getElementById('fin-porc').textContent=porc+'%';
     const el=document.getElementById('fin-list');
-    el.innerHTML=movs.length?movs.slice(0,10).map(m=>`<div class="fin-row"><div class="fin-icon">${m.icono||'💰'}</div><div class="fin-info"><div class="fin-name">${m.descripcion}</div><div class="fin-date">${fmtDate(m.fecha)}</div></div><div class="fin-amount ${m.tipo==='gasto'?'neg':'pos'}">${m.tipo==='gasto'?'-':'+'} ${fmtMoney(m.monto)}</div><div onclick="delFin('${m.id}')" style="color:var(--text3);cursor:pointer;padding:4px">✕</div></div>`).join(''):`<div class="empty"><div class="et">Sin movimientos este mes</div></div>`;
+    el.innerHTML=movs.length?movs.slice(0,10).map(m=>`<div class="fin-row"><div class="fin-icon">${CAT_ICONS[m.categoria]||m.icono||'💰'}</div><div class="fin-info"><div class="fin-name">${m.descripcion}</div><div class="fin-date">${m.categoria?m.categoria+' · ':''} ${fmtDate(m.fecha)}</div></div><div class="fin-amount ${m.tipo==='gasto'?'neg':'pos'}">${m.tipo==='gasto'?'-':'+'} ${fmtMoney(m.monto)}</div><div onclick="delFin('${m.id}')" style="color:var(--text3);cursor:pointer;padding:4px">✕</div></div>`).join(''):`<div class="empty"><div class="et">Sin movimientos este mes</div></div>`;
+  // Category breakdown
+  const gastos = movs.filter(m=>m.tipo==='gasto');
+  const totalGas = gastos.reduce((a,m)=>a+Number(m.monto),0);
+  const byCat = {};
+  gastos.forEach(m=>{
+    const cat = m.categoria||'Otros';
+    byCat[cat] = (byCat[cat]||0) + Number(m.monto);
+  });
+  const catEl = document.getElementById('fin-cats-chart');
+  if(catEl){
+    if(Object.keys(byCat).length === 0){
+      catEl.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px">Sin gastos este mes</div>';
+    } else {
+      const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+      catEl.innerHTML = sorted.map(([cat,monto])=>{
+        const pct = Math.round((monto/totalGas)*100);
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:13px">${CAT_ICONS[cat]||'📦'} ${cat}</div>
+            <div style="font-size:12px;color:var(--text2)">${fmtMoney(monto)} · ${pct}%</div>
+          </div>
+          <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--accent2);border-radius:3px;transition:width .5s"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
   }catch(e){console.warn('finanzas:',e.message);}
   loadMetas();
 }
@@ -1391,7 +1467,23 @@ async function loadMetas(){
   try{
     const metas=await sb('metas','GET',null,'?order=created_at.asc');
     const el=document.getElementById('metas-list');
-    el.innerHTML=metas.length?metas.map(m=>{const pct=Math.min(100,Math.round((m.actual/m.objetivo)*100));return `<div style="margin-bottom:16px"><div class="row-between" style="margin-bottom:6px"><div style="font-size:14px">${m.icono||'🎯'} ${m.nombre}</div><div style="font-size:12px;color:var(--text2)">${fmtMoney(m.actual)} / ${fmtMoney(m.objetivo)}</div></div><div class="level-bar"><div class="level-fill" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;margin-top:4px"><div style="font-size:12px;color:var(--text3)">${pct}%</div><div style="font-size:12px;color:var(--accent);cursor:pointer" onclick="openModal('abono','${m.id}')">+ abonar</div></div></div>`;}).join(''):`<div class="empty"><div class="et">Agregá una meta de ahorro</div></div>`;
+    el.innerHTML=metas.length?metas.map(m=>{
+      const pct=Math.min(100,Math.round((m.actual/m.objetivo)*100));
+      const meses=mesesRestantes(m.fecha_limite);
+      const restante=Math.max(0,m.objetivo-m.actual);
+      const porMes=meses>0?Math.ceil(restante/meses):null;
+      const fechaStr=m.fecha_limite?new Date(m.fecha_limite+'T12:00:00').toLocaleDateString('es-AR',{month:'long',year:'numeric'}):'';
+      return `<div style="margin-bottom:16px;background:var(--bg3);border-radius:16px;padding:14px">
+        <div class="row-between" style="margin-bottom:6px">
+          <div style="font-size:14px;font-weight:500">${m.icono||'🎯'} ${m.nombre}</div>
+          <div style="font-size:12px;color:var(--text2)">${fmtMoney(m.actual)} / ${fmtMoney(m.objetivo)}</div>
+        </div>
+        <div class="level-bar" style="margin-bottom:8px"><div class="level-fill" style="width:${pct}%;background:var(--accent3)"></div></div>
+        ${fechaStr?`<div style="font-size:11px;color:var(--text3);margin-bottom:4px">📅 Límite: ${fechaStr}${meses!==null?' · '+meses+' mes'+(meses!==1?'es':'')+' restante'+(meses!==1?'s':''):''}</div>`:''}
+        ${porMes?`<div style="font-size:12px;color:var(--accent);font-weight:600">→ Ahorrá ${fmtMoney(porMes)}/mes para llegar</div>`:''}
+        ${pct>=100?`<div style="font-size:12px;color:var(--accent3);font-weight:600">✅ ¡Meta cumplida!</div>`:''}
+      </div>`;
+    }).join(''):`<div class="empty"><div class="et">Agregá una meta de ahorro</div></div>`;
   }catch(e){console.warn('metas:',e.message);}
 }
 async function delFin(id){try{await sb('finanzas','DELETE',null,`?id=eq.${id}`);loadFinanzas();}catch{}}
@@ -1649,8 +1741,42 @@ function openModal(type,extra=''){
   if(type==='captura'){html+=`<div class="modal-title">Captura rápida ⚡</div><div class="modal-tags"><button class="modal-tag selected" onclick="selTag(this)">💡 Idea</button><button class="modal-tag" onclick="selTag(this)">🔍 Investigar</button><button class="modal-tag" onclick="selTag(this)">📚 Aprender</button><button class="modal-tag" onclick="selTag(this)">✅ Tarea</button><button class="modal-tag" onclick="selTag(this)">📝 Nota</button></div><textarea class="modal-textarea" id="m-texto" placeholder="¿Qué tenés en la cabeza?"></textarea><button class="btn-primary" onclick="guardarNota()">Guardar ✓</button>`;}
   else if(type==='habito'){html+=`<div class="modal-title">Nuevo hábito</div><input class="modal-input" id="m-hnom" placeholder="Nombre"><div class="modal-row"><input class="modal-input" id="m-hicon" placeholder="Ícono 🌟" style="margin-bottom:0"><input class="modal-input" id="m-hobj" placeholder="Objetivo" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarHabito()" style="margin-top:10px">Agregar ✓</button>`;}
   else if(type==='evento'){html+=`<div class="modal-title">Nuevo evento</div><input class="modal-input" id="m-etit" placeholder="Título"><div class="modal-row"><input class="modal-input" id="m-efecha" type="date" value="${extra||today()}" style="margin-bottom:0"><input class="modal-input" id="m-ehora" type="time" style="margin-bottom:0"></div><select class="modal-input" id="m-ecolor"><option value="#7b6fcd">🟣 Violeta</option><option value="#d4845a">🟠 Naranja</option><option value="#5aad8f">🟢 Verde</option><option value="#d4a45a">🟡 Amarillo</option><option value="#c96060">🔴 Rojo</option></select><button class="btn-primary" onclick="guardarEvento()">Agregar ✓</button>`;}
-  else if(type==='finanza'){html+=`<div class="modal-title">Nuevo movimiento</div><div class="modal-row" style="margin-bottom:10px"><button class="modal-tag selected" id="ftipo-gasto" onclick="selFinTipo('gasto')">↓ Gasto</button><button class="modal-tag" id="ftipo-ingreso" onclick="selFinTipo('ingreso')">↑ Ingreso</button></div><input class="modal-input" id="m-fdesc" placeholder="Descripción"><div class="modal-row"><input class="modal-input" id="m-fmonto" type="number" placeholder="Monto $" style="margin-bottom:0"><input class="modal-input" id="m-ficon" placeholder="Ícono 🛒" style="margin-bottom:0"></div><input class="modal-input" id="m-ffecha" type="date" value="${today()}"><button class="btn-primary" onclick="guardarFinanza()">Guardar ✓</button>`;}
-  else if(type==='meta'){html+=`<div class="modal-title">Nueva meta</div><input class="modal-input" id="m-mnom" placeholder="Nombre (ej: Viaje a Bariloche)"><div class="modal-row"><input class="modal-input" id="m-mobj" type="number" placeholder="Objetivo $" style="margin-bottom:0"><input class="modal-input" id="m-micon" placeholder="Ícono 🎯" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarMeta()" style="margin-top:10px">Crear ✓</button>`;}
+  else if(type==='finanza'){html+=`<div class="modal-title">Nuevo movimiento</div>
+    <div class="modal-row" style="margin-bottom:10px">
+      <button class="modal-tag selected" id="ftipo-gasto" onclick="selFinTipo('gasto')">↓ Gasto</button>
+      <button class="modal-tag" id="ftipo-ingreso" onclick="selFinTipo('ingreso')">↑ Ingreso</button>
+    </div>
+    <input class="modal-input" id="m-fdesc" placeholder="Descripción">
+    <div class="modal-row">
+      <input class="modal-input" id="m-fmonto" type="number" placeholder="Monto $" style="margin-bottom:0">
+      <input class="modal-input" id="m-ficon" placeholder="Ícono 🛒" style="margin-bottom:0">
+    </div>
+    <div id="fin-cats-gasto" class="modal-tags" style="margin-top:10px">
+      <button class="modal-tag selected" onclick="selFinCat(this,'Comida')">🍔 Comida</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Transporte')">🚌 Transporte</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Ocio')">🎉 Ocio</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Ropa')">👕 Ropa</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Tecnología')">💻 Tecnología</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Deudas')">💳 Deudas</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Salud')">🏥 Salud</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Otros')">📦 Otros</button>
+    </div>
+    <div id="fin-cats-ingreso" class="modal-tags" style="margin-top:10px;display:none">
+      <button class="modal-tag selected" onclick="selFinCat(this,'Sueldo')">💼 Sueldo</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Freelance')">🖥️ Freelance</button>
+      <button class="modal-tag" onclick="selFinCat(this,'Otros')">📦 Otros</button>
+    </div>
+    <input class="modal-input" id="m-ffecha" type="date" value="${today()}" style="margin-top:10px">
+    <button class="btn-primary" onclick="guardarFinanza()">Guardar ✓</button>`;}
+  else if(type==='meta'){html+=`<div class="modal-title">Nueva meta</div>
+    <input class="modal-input" id="m-mnom" placeholder="Nombre (ej: Viaje a Bariloche)">
+    <div class="modal-row">
+      <input class="modal-input" id="m-mobj" type="number" placeholder="Objetivo $" style="margin-bottom:0">
+      <input class="modal-input" id="m-micon" placeholder="Ícono 🎯" style="margin-bottom:0">
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin:10px 0 4px">📅 Fecha límite (opcional)</div>
+    <input class="modal-input" id="m-mfecha" type="date">
+    <button class="btn-primary" onclick="guardarMeta()" style="margin-top:10px">Crear ✓</button>`;}
   else if(type==='abono'){html+=`<div class="modal-title">Abonar a meta</div><input class="modal-input" id="m-abono" type="number" placeholder="Monto $"><button class="btn-primary" onclick="guardarAbono('${extra}')">Abonar ✓</button>`;}
   else if(type==='logro'){html+=`<div class="modal-title">Agregar logro</div><input class="modal-input" id="m-logro" placeholder="¿Qué lograste hoy?"><button class="btn-primary" onclick="guardarLogro()">Agregar ✓</button>`;}
   else if(type==='libro'){html+=`<div class="modal-title">Agregar libro 📚</div><input class="modal-input" id="m-btit" placeholder="Título"><input class="modal-input" id="m-baut" placeholder="Autor"><select class="modal-input" id="m-best"><option value="leyendo">📖 Leyendo</option><option value="pendiente" selected>📚 Pendiente</option><option value="leido">✅ Leído</option></select><div class="modal-row"><input class="modal-input" id="m-bpags" type="number" placeholder="Total de páginas" style="margin-bottom:0"><input class="modal-input" id="m-bpag" type="number" placeholder="Página actual" style="margin-bottom:0"></div><button class="btn-primary" onclick="guardarLibro()" style="margin-top:10px">Agregar ✓</button>`;}
@@ -1830,9 +1956,10 @@ async function guardarNota(){const texto=document.getElementById('m-texto')?.val
 async function guardarHabito(){const nombre=document.getElementById('m-hnom')?.value.trim();if(!nombre){showToast('Poné un nombre');return;}const icono=document.getElementById('m-hicon')?.value.trim()||'⭐';const objetivo=document.getElementById('m-hobj')?.value.trim()||'Diario';try{await sb('habitos','POST',{nombre,icono,objetivo,streak:0});closeModal();showToast('Hábito agregado ✓');loadHabitos();}catch{showToast('Error');}}
 async function guardarEvento(){const titulo=document.getElementById('m-etit')?.value.trim();const fecha=document.getElementById('m-efecha')?.value;const hora=document.getElementById('m-ehora')?.value;const color=document.getElementById('m-ecolor')?.value;if(!titulo||!fecha){showToast('Título y fecha requeridos');return;}try{await sb('eventos','POST',{titulo,fecha,hora:hora||null,color});closeModal();showToast('Evento agregado ✓');loadAgenda();loadHome();
     earnXP('agenda-evento',1,1);}catch{showToast('Error');}}
-async function guardarFinanza(){const desc=document.getElementById('m-fdesc')?.value.trim();const monto=parseFloat(document.getElementById('m-fmonto')?.value);const icono=document.getElementById('m-ficon')?.value.trim()||'💰';const fecha=document.getElementById('m-ffecha')?.value||today();if(!desc||!monto){showToast('Completá los campos');return;}try{await sb('finanzas','POST',{descripcion:desc,monto,tipo:finTipo,icono,fecha});closeModal();showToast('Guardado ✓');loadFinanzas();
+async function guardarFinanza(){const desc=document.getElementById('m-fdesc')?.value.trim();const monto=parseFloat(document.getElementById('m-fmonto')?.value);const icono=document.getElementById('m-ficon')?.value.trim()||'💰';const fecha=document.getElementById('m-ffecha')?.value||today();if(!desc||!monto){showToast('Completá los campos');return;}try{await sb('finanzas','POST',{descripcion:desc,monto,tipo:finTipo,icono,fecha,categoria:finCatActual||'Otros'});closeModal();showToast('Guardado ✓');loadFinanzas();
     earnXP('agenda-finanza',1,1);}catch{showToast('Error');}}
-async function guardarMeta(){const nombre=document.getElementById('m-mnom')?.value.trim();const objetivo=parseFloat(document.getElementById('m-mobj')?.value);const icono=document.getElementById('m-micon')?.value.trim()||'🎯';if(!nombre||!objetivo){showToast('Completá los campos');return;}try{await sb('metas','POST',{nombre,objetivo,actual:0,icono});closeModal();showToast('Meta creada ✓');loadMetas();}catch{showToast('Error');}}
+async function guardarMeta(){const nombre=document.getElementById('m-mnom')?.value.trim();const objetivo=parseFloat(document.getElementById('m-mobj')?.value);const icono=document.getElementById('m-micon')?.value.trim()||'🎯';if(!nombre||!objetivo){showToast('Completá los campos');return;}try{const fechaLimite=document.getElementById('m-mfecha')?.value||null;
+    await sb('metas','POST',{nombre,objetivo,actual:0,icono,fecha_limite:fechaLimite});closeModal();showToast('Meta creada ✓');loadMetas();}catch{showToast('Error');}}
 async function guardarAbono(metaId){const monto=parseFloat(document.getElementById('m-abono')?.value);if(!monto){showToast('Ingresá un monto');return;}try{const meta=await sb('metas','GET',null,`?id=eq.${metaId}`);await sb('metas','PATCH',{actual:Number(meta[0].actual)+monto},`?id=eq.${metaId}`);closeModal();showToast(`+${fmtMoney(monto)} abonado ✓`);loadMetas();}catch{showToast('Error');}}
 async function guardarLogro(){const logro=document.getElementById('m-logro')?.value.trim();if(!logro){showToast('Escribí un logro');return;}closeModal();const chip=document.createElement('div');chip.className='logro-chip';chip.textContent=logro;chip.onclick=()=>{chip.remove();syncLogros();};document.getElementById('logros-hoy')?.appendChild(chip);syncLogros();showToast('Logro agregado ✓');}
 async function guardarLibro(){

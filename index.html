@@ -874,15 +874,19 @@ function checkRacha(){
   const hoy = today();
   if(racha.ultimo === hoy) return racha.dias; // already counted today
   
-  let diasSinUsar = 0;
-  if(racha.ultimo){
-    const diff = new Date(hoy+'T12:00:00') - new Date(racha.ultimo+'T12:00:00');
-    diasSinUsar = diff / (1000*60*60*24);
+  if(!racha.ultimo){
+    // First time ever - start at 1
+    racha.dias = 1;
+    racha.ultimo = hoy;
+    saveRacha(racha);
+    return 1;
   }
   
+  const diff = new Date(hoy+'T12:00:00') - new Date(racha.ultimo+'T12:00:00');
+  const diasSinUsar = diff / (1000*60*60*24);
+  
   if(diasSinUsar > 1.5){
-    // racha cortada
-    racha.dias = 1;
+    racha.dias = 1; // racha cortada
   } else {
     racha.dias = (racha.dias || 0) + 1;
   }

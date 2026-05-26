@@ -2603,63 +2603,106 @@ async function initOneSignal(){
 }
 
 function scheduleNotifications(){
-  // We use a check on each app open to send relevant notifications
-  // via OneSignal's API - this runs client-side as a trigger
   const now = nowAR();
   const h = now.getHours();
   const min = now.getMinutes();
-  const day = now.getDay(); // 0=Sunday
+  const day = now.getDay();
   const dateStr = today();
-  const lastNotif = localStorage.getItem('franos-last-notif-' + dateStr);
+  
+  // Get user name
+  const userId = currentUser?.id;
+  const nombre = (userId ? localStorage.getItem('franos-nombre-'+userId) : null) || 'vos';
 
-  // Morning notification at 10:00 — hábitos del día
-  if(h === 10 && min < 15 && lastNotif !== 'morning'){
-    localStorage.setItem('franos-last-notif-' + dateStr, 'morning');
+  // ── 10:00 Buenos días + prioridades ──
+  if(h === 10 && min < 15 && !localStorage.getItem('franos-notif-morning-'+dateStr)){
+    localStorage.setItem('franos-notif-morning-'+dateStr, '1');
     sendLocalNotif(
-      '☀️ Buenos días, Fran',
-      '¿Qué hábitos arrancás hoy? Revisá tu lista y empezá con uno.',
+      '☀️ Buenos días, ' + nombre,
+      '¿Cuáles son tus 3 prioridades de hoy? Abrí FranOS y arrancá.',
       '/franos'
     );
   }
 
-  // Evening notification at 22:00 — diario
-  if(h === 22 && min < 15 && lastNotif !== 'evening' && lastNotif !== 'morning'){
-    localStorage.setItem('franos-last-notif-' + dateStr, 'evening');
+  // ── 21:00 Recordatorio gastos ──
+  if(h === 21 && min < 15 && !localStorage.getItem('franos-notif-gastos-'+dateStr)){
+    localStorage.setItem('franos-notif-gastos-'+dateStr, '1');
     sendLocalNotif(
-      '📓 Antes de dormir, Fran',
+      '💰 ¿Registraste tus gastos hoy, ' + nombre + '?',
+      'Tomá 1 minuto para anotar lo que gastaste. Tu balance te lo agradece.',
+      '/franos'
+    );
+  }
+
+  // ── 22:00 Diario ──
+  if(h === 22 && min < 15 && !localStorage.getItem('franos-notif-diario-'+dateStr)){
+    localStorage.setItem('franos-notif-diario-'+dateStr, '1');
+    sendLocalNotif(
+      '📓 Antes de dormir, ' + nombre,
       '¿Escribiste en el diario hoy? Son solo 2 minutos y vale mucho.',
       '/franos'
     );
   }
 
-  // Sunday weekly review
+  // ── Domingo 10-12 Revisión semanal ──
   if(day === 0 && h >= 10 && h < 12){
-    const lastWeekly = localStorage.getItem('franos-last-weekly');
     const weekKey = weekStart();
-    if(lastWeekly !== weekKey){
-      localStorage.setItem('franos-last-weekly', weekKey);
+    if(localStorage.getItem('franos-notif-weekly') !== weekKey){
+      localStorage.setItem('franos-notif-weekly', weekKey);
       sendLocalNotif(
-        '🔄 Revisión semanal',
-        'Es domingo. ¿Cómo fue la semana? Dedicale 5 minutos.',
+        '🔄 Revisión semanal, ' + nombre,
+        'Es domingo. ¿Cómo fue la semana? Dedicale 5 minutos en FranOS.',
         '/franos'
       );
     }
   }
 
-  // Monthly financial balance — last 3 days of month
+  // ── Fin de mes balance ──
   const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
   if(now.getDate() >= lastDay - 2 && h === 10){
-    const lastMonthly = localStorage.getItem('franos-last-monthly');
     const monthKey = monthStart();
-    if(lastMonthly !== monthKey){
-      localStorage.setItem('franos-last-monthly', monthKey);
+    if(localStorage.getItem('franos-notif-monthly') !== monthKey){
+      localStorage.setItem('franos-notif-monthly', monthKey);
       sendLocalNotif(
-        '💰 Balance mensual',
+        '💰 Balance mensual, ' + nombre,
         'Fin de mes. ¿Cómo quedaron las finanzas? Revisá en FranOS.',
         '/franos'
       );
     }
   }
+
+  // ── Racha en peligro ──
+  try{
+    const racha = getRacha();
+    if(racha.ultimo && racha.ultimo !== dateStr){
+      const diff = (new Date(dateStr+'T12:00:00') - new Date(racha.ultimo+'T12:00:00')) / (1000*60*60*24);
+      if(diff >= 1 && diff < 1.5 && h >= 20 && !localStorage.getItem('franos-notif-racha-'+dateStr)){
+        localStorage.setItem('franos-notif-racha-'+dateStr, '1');
+        sendLocalNotif(
+          '🔥 ¡No pierdas la racha, ' + nombre + '!',
+          'Llevas ' + racha.dias + ' días seguidos. Abrí la app antes de medianoche.',
+          '/franos'
+        );
+      }
+    }
+  }catch{}
+
+  // ── Hábitos completos ──
+  try{
+    if(h >= 20 && !localStorage.getItem('franos-notif-habitos-'+dateStr)){
+      sb('habitos_log','GET',null,'?fecha=eq.'+dateStr+'&completado=eq.true&select=id').then(logs=>{
+        sb('habitos','GET',null,'?select=id').then(habs=>{
+          if(habs.length > 0 && logs.length >= habs.length){
+            localStorage.setItem('franos-notif-habitos-'+dateStr, '1');
+            sendLocalNotif(
+              '🏆 ¡Todos los hábitos, ' + nombre + '!',
+              'Completaste todos tus hábitos del día. Eso es constancia real.',
+              '/franos'
+            );
+          }
+        });
+      });
+    }
+  }catch{}
 }
 
 async function sendLocalNotif(title, message, url){

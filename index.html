@@ -979,6 +979,7 @@ function loadApp(){
   updateXPDisplay();
   initNotifications();
   updateTime();
+  updateNotifBadge();
   loadHome();
   loadHabitos();
   loadNotas();
@@ -2753,20 +2754,99 @@ function scheduleNotifications(){
   }catch{}
 }
 
-async function sendLocalNotif(title, message, url){
+async function saveNotifToHistory(title, message){
   try{
-    await OneSignal.Notifications.requestPermission();
-    // Use OneSignal to show notification
+    const history = JSON.parse(localStorage.getItem('franos-notif-history')||'[]');
+    const now = nowAR();
+    history.unshift({
+      title,
+      message,
+      fecha: today(),
+      hora: now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
+      ts: Date.now()
+    });
+    // Keep last 50
+    localStorage.setItem('franos-notif-history', JSON.stringify(history.slice(0,50)));
+    // Update badge
+    updateNotifBadge();
+  }catch{}
+}
+
+function updateNotifBadge(){
+  try{
+    const history = JSON.parse(localStorage.getItem('franos-notif-history')||'[]');
+    const lastSeen = parseInt(localStorage.getItem('franos-notif-last-seen')||'0');
+    const unread = history.filter(n=>n.ts > lastSeen).length;
+    const badge = document.getElementById('notif-badge');
+    if(badge){
+      badge.style.display = unread > 0 ? 'flex' : 'none';
+      badge.textContent = unread > 9 ? '9+' : unread;
+    }
+  }catch{}
+}
+
+function openNotifPanel(){
+  try{
+    // Mark all as seen
+    localStorage.setItem('franos-notif-last-seen', Date.now().toString());
+    updateNotifBadge();
+  }catch{}
+  
+  const history = JSON.parse(localStorage.getItem('franos-notif-history')||'[]');
+  const mc = document.getElementById('modal-content');
+  let html = '<div class="modal-handle"></div>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">';
+  html += '<div class="modal-title" style="margin:0">🔔 Notificaciones</div>';
+  if(history.length > 0){
+    html += '<button onclick="clearNotifHistory()" style="background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;touch-action:manipulation">Borrar todo</button>';
+  }
+  html += '</div>';
+  
+  if(history.length === 0){
+    html += '<div class="empty"><div class="ei">🔔</div><div class="et">Sin notificaciones todavía</div></div>';
+  } else {
+    let lastFecha = '';
+    history.forEach(n=>{
+      if(n.fecha !== lastFecha){
+        const fechaLabel = n.fecha === today() ? 'Hoy' : n.fecha === daysAgo(1) ? 'Ayer' : fmtDate(n.fecha);
+        html += '<div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin:16px 0 8px">' + fechaLabel + '</div>';
+        lastFecha = n.fecha;
+      }
+      html += '<div style="background:var(--bg3);border-radius:14px;padding:12px 14px;margin-bottom:8px">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
+      html += '<div style="font-size:14px;font-weight:500;color:var(--text)">' + n.title + '</div>';
+      html += '<div style="font-size:11px;color:var(--text3)">' + (n.hora||'') + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:13px;color:var(--text2);line-height:1.5">' + n.message + '</div>';
+      html += '</div>';
+    });
+  }
+  
+  mc.innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function clearNotifHistory(){
+  localStorage.removeItem('franos-notif-history');
+  updateNotifBadge();
+  openNotifPanel();
+}
+
+function sendLocalNotif(title, message, url){
+  // Save to history always
+  saveNotifToHistory(title, message);
+  try{
     if('Notification' in window && Notification.permission === 'granted'){
       if('serviceWorker' in navigator){
-        const reg = await navigator.serviceWorker.ready;
-        reg.showNotification(title, {
-          body: message,
-          icon: './icon-192.png',
-          badge: './icon-192.png',
-          data: { url: 'https://francogallozo52.github.io' + url },
-          tag: title,
-          requireInteraction: false,
+        navigator.serviceWorker.ready.then(reg=>{
+          reg.showNotification(title, {
+            body: message,
+            icon: './icon-192.png',
+            badge: './icon-192.png',
+            data: { url: 'https://francogallozo52.github.io' + url },
+            tag: title,
+            requireInteraction: false,
+          });
         });
       }
     }

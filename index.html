@@ -811,10 +811,6 @@ function registrarDiaSesion(){
 
 
 // ── SISTEMA XP ──
-function getXP(){ try{return parseInt(localStorage.getItem('franos-xp')||'0');}catch{return 0;} }
-function setXP(v){ try{localStorage.setItem('franos-xp',Math.max(0,v));}catch{} }
-
-
 function updateXPDisplay(){
   const xp=getXP();
   const nivel=getNivel(xp);
@@ -1006,38 +1002,58 @@ async function checkSession(){
           headers: {'apikey': KEY, 'Authorization': 'Bearer ' + access_token}
         });
         const user = await res.json();
-        authToken = access_token;
-        currentUser = user;
-        localStorage.setItem('franos-session', JSON.stringify({access_token, refresh_token, user}));
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showApp();
-        return;
-      }catch{}
+        if(user.id){
+          authToken = access_token;
+          currentUser = user;
+          localStorage.setItem('franos-session', JSON.stringify({access_token, refresh_token, user}));
+          window.history.replaceState({}, document.title, window.location.pathname);
+          showApp();
+          return;
+        }
+      }catch(e){ console.warn('OAuth callback error:', e); }
     }
   }
 
-  // Normal session check
+  // Normal session check - try saved session
   try{
     const saved = localStorage.getItem('franos-session');
     if(saved){
       const session = JSON.parse(saved);
-      // Refresh token
-      const res = await fetch(`${SB}/auth/v1/token?grant_type=refresh_token`, {
-        method: 'POST',
-        headers: {'apikey': KEY, 'Content-Type': 'application/json'},
-        body: JSON.stringify({refresh_token: session.refresh_token})
-      });
-      if(res.ok){
-        const data = await res.json();
-        authToken = data.access_token;
-        currentUser = data.user;
-        localStorage.setItem('franos-session', JSON.stringify(data));
-        showApp();
-        return;
+      if(session.access_token){
+        // First try using existing token
+        const userRes = await fetch(`${SB}/auth/v1/user`, {
+          headers: {'apikey': KEY, 'Authorization': 'Bearer ' + session.access_token}
+        });
+        if(userRes.ok){
+          const user = await userRes.json();
+          if(user.id){
+            authToken = session.access_token;
+            currentUser = user;
+            showApp();
+            return;
+          }
+        }
+        // Token expired - try refresh
+        if(session.refresh_token){
+          const res = await fetch(`${SB}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: {'apikey': KEY, 'Content-Type': 'application/json'},
+            body: JSON.stringify({refresh_token: session.refresh_token})
+          });
+          if(res.ok){
+            const data = await res.json();
+            if(data.access_token){
+              authToken = data.access_token;
+              currentUser = data.user;
+              localStorage.setItem('franos-session', JSON.stringify(data));
+              showApp();
+              return;
+            }
+          }
+        }
       }
     }
-  }catch{}
+  }catch(e){ console.warn('Session check error:', e); }
   showLogin();
 }
 
